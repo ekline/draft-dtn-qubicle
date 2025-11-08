@@ -19,35 +19,35 @@
 # Change the file extension to match the format (.xml for XML, etc...)
 #
 ###
-title: "TODO - Your title"
-abbrev: "TODO - Abbreviation"
+title: "DTN QUIC Bundle Protocol Convergence Layer (qubicle)"
+abbrev: "DTN QUIC CL"
 category: info
 
-docname: draft-todo-yourname-protocol-latest
+docname: draft-ek-dtn-qubicle-latest
 submissiontype: IETF  # also: "independent", "editorial", "IAB", or "IRTF"
 number:
 date:
 consensus: true
 v: 3
-area: AREA
-workgroup: WG Working Group
+area: INT
+workgroup: DTN Working Group
 keyword:
  - next generation
  - unicorn
  - sparkling distributed ledger
 venue:
-  group: WG
+  group: DTNWG
   type: Working Group
-  mail: WG@example.com
+  mail: dtn@ietf.org
   arch: https://example.com/WG
   github: USER/REPO
   latest: https://example.com/LATEST
 
 author:
  -
-    fullname: Your Name Here
-    organization: Your Organization Here
-    email: your.email@example.com
+    fullname: Erik Kline
+    organization: Aalyria Technologies, Inc.
+    email: ek.ietf@gmail.com
 
 normative:
 
