@@ -2,14 +2,14 @@
 
 
 
-WG Working Group                                              Y. N. Here
-Internet-Draft                                    Your Organization Here
+DTN Working Group                                               E. Kline
+Internet-Draft                                Aalyria Technologies, Inc.
 Intended status: Informational                           8 November 2025
 Expires: 12 May 2026
 
 
-                           TODO - Your title
-                  draft-todo-yourname-protocol-latest
+          DTN QUIC Bundle Protocol Convergence Layer (qubicle)
+                      draft-ek-dtn-qubicle-latest
 
 Abstract
 
@@ -21,12 +21,12 @@ About This Document
 
    The latest revision of this draft can be found at
    https://example.com/LATEST.  Status information for this document may
-   be found at https://datatracker.ietf.org/doc/draft-todo-yourname-
-   protocol/.
+   be found at https://datatracker.ietf.org/doc/draft-ek-dtn-qubicle/.
 
-   Discussion of this document takes place on the WG Working Group
-   mailing list (mailto:WG@example.com), which is archived at
-   https://example.com/WG.
+   Discussion of this document takes place on the DTNWG Working Group
+   mailing list (mailto:dtn@ietf.org), which is archived at
+   https://example.com/WG.  Subscribe at
+   https://www.ietf.org/mailman/listinfo/dtn/.
 
    Source for this draft and an issue tracker can be found at
    https://github.com/USER/REPO.
@@ -109,6 +109,6 @@ Acknowledgments
 
 Author's Address
 
-   Your Name Here
-   Your Organization Here
-   Email: your.email@example.com
+   Erik Kline
+   Aalyria Technologies, Inc.
+   Email: ek.ietf@gmail.com
