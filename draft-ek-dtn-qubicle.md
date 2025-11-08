@@ -9,19 +9,19 @@ number:
 date:
 consensus: true
 v: 3
-area: INT
-workgroup: DTN Working Group
+area: "Internet"
+workgroup: "Delay/Disruption Tolerant Networking"
 keyword:
  - next generation
  - unicorn
  - sparkling distributed ledger
 venue:
-  group: DTNWG
-  type: Working Group
-  mail: dtn@ietf.org
-  arch: https://example.com/WG
-  github: USER/REPO
-  latest: https://example.com/LATEST
+  group: "Delay/Disruption Tolerant Networking"
+  type: "Working Group"
+  mail: "dtn@ietf.org"
+  arch: "https://mailarchive.ietf.org/arch/browse/dtn/"
+  github: "ekline/draft-dtn-qubicle"
+  latest: "https://ekline.github.io/draft-dtn-qubicle/draft-ek-dtn-qubicle.html"
 
 author:
  -
