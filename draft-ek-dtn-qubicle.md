@@ -1,7 +1,7 @@
 ---
 title: "DTN QUIC Bundle Protocol Convergence Layer (qubicle)"
 abbrev: "DTN QUIC CL"
-category: info
+category: std
 
 docname: draft-ek-dtn-qubicle-latest
 submissiontype: IETF  # also: "independent", "editorial", "IAB", or "IRTF"
@@ -30,8 +30,11 @@ author:
     email: ek.ietf@gmail.com
 
 normative:
+  BPv7: RFC9171
+  BTP-U: I-D.ietf-dtn-btpu
 
 informative:
+  RFC9308:
 
 ...
 
@@ -42,6 +45,20 @@ TODO Abstract
 
 --- middle
 
+<!--
+
+* one new stream per bundle
+* QUIC considerations
+  * what to do about 0-RTT and replay attacks
+    * only ok if you can de-dup Bundles in some way?
+    * only for non-Bundle, {0,1} config negotiation
+  * session resumption vs keep-alives
+    * send QUIC PING frames periodically
+  * Streams
+    * unidirectional for Bundle delivery
+
+-->
+
 # Introduction
 
 TODO Introduction
@@ -51,6 +68,22 @@ TODO Introduction
 
 {::boilerplate bcp14-tagged}
 
+
+# Operational Considerations
+
+{{RFC9308}} references measurements indicating that a single-digit
+percentage of networks block all UDP traffic. Any BP Agent initiating
+a QUIC CL to a peer may encounter this kind of traffic block. While some
+UDP ports might not be blocked, BP Agents SHOULD support a variety of CL
+implementations and be prepared to try alternate CLs in the presence
+of CL-level failures.
+
+Similarly, BP Agents that offer a listening QUIC CL endpoint SHOULD
+support a variety of CL implementations and be prepared to receive
+other CL connections to support clients in challenged networks.
+
+A list of recommended CLs and any ordering of preference for their use
+is out of scope of this document.
 
 # Security Considerations
 
