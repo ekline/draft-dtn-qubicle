@@ -1,0 +1,83 @@
+{
+  "magic": "E!vIA5L86J2I",
+  "timestamp": "2025-11-11T00:45:50.041504+00:00",
+  "repo": "ekline/draft-dtn-qubicle",
+  "labels": [
+    {
+      "name": "bug",
+      "description": "Something isn't working",
+      "color": "d73a4a"
+    },
+    {
+      "name": "documentation",
+      "description": "Improvements or additions to documentation",
+      "color": "0075ca"
+    },
+    {
+      "name": "duplicate",
+      "description": "This issue or pull request already exists",
+      "color": "cfd3d7"
+    },
+    {
+      "name": "enhancement",
+      "description": "New feature or request",
+      "color": "a2eeef"
+    },
+    {
+      "name": "good first issue",
+      "description": "Good for newcomers",
+      "color": "7057ff"
+    },
+    {
+      "name": "help wanted",
+      "description": "Extra attention is needed",
+      "color": "008672"
+    },
+    {
+      "name": "invalid",
+      "description": "This doesn't seem right",
+      "color": "e4e669"
+    },
+    {
+      "name": "question",
+      "description": "Further information is requested",
+      "color": "d876e3"
+    },
+    {
+      "name": "wontfix",
+      "description": "This will not be worked on",
+      "color": "ffffff"
+    }
+  ],
+  "issues": [],
+  "pulls": [
+    {
+      "number": 1,
+      "id": "PR_kwDOQR8Nj86yUwwP",
+      "title": "Update draft for DTN QUIC Bundle Protocol",
+      "url": "https://github.com/ekline/draft-dtn-qubicle/pull/1",
+      "state": "MERGED",
+      "author": "ekline",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "",
+      "createdAt": "2025-11-08T21:01:18Z",
+      "updatedAt": "2025-11-08T21:01:54Z",
+      "baseRepository": "ekline/draft-dtn-qubicle",
+      "baseRefName": "main",
+      "baseRefOid": "9b01c2c643e4eff9a1f0e1f8a226a925b06fadfa",
+      "headRepository": "ekline/draft-dtn-qubicle",
+      "headRefName": "ekline-patch-1",
+      "headRefOid": "c03424848b73cdb46d84b3b881db4ea68022f7d8",
+      "closedAt": "2025-11-08T21:01:53Z",
+      "mergedAt": "2025-11-08T21:01:53Z",
+      "mergedBy": "ekline",
+      "mergeCommit": {
+        "oid": "94c8e6aab68347be843ab45bb0cb00b72da1af2f"
+      },
+      "comments": [],
+      "reviews": []
+    }
+  ]
+}
