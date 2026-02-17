@@ -6,13 +6,15 @@
 <meta content="initial-scale=1.0" name="viewport">
 <title>DTN QUIC Bundle Protocol Convergence Layer (qubicle)</title>
 <meta content="Erik Kline" name="author">
+<meta content="Rick Taylor" name="author">
 <meta content="
-       TODO Abstract 
+       This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security, requiring no application-layer framing for reliable transfers. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTPU) over QUIC datagrams. 
     " name="description">
 <meta content="xml2rfc 3.31.0" name="generator">
-<meta content="next generation" name="keyword">
-<meta content="unicorn" name="keyword">
-<meta content="sparkling distributed ledger" name="keyword">
+<meta content="DTN" name="keyword">
+<meta content="BPv7" name="keyword">
+<meta content="QUIC" name="keyword">
+<meta content="Convergence Layer" name="keyword">
 <meta content="draft-ek-dtn-qubicle-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.31.0
@@ -1050,7 +1052,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <td class="right">February 2026</td>
 </tr></thead>
 <tfoot><tr>
-<td class="left">Kline</td>
+<td class="left">Kline &amp; Taylor</td>
 <td class="center">Expires 21 August 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
@@ -1070,11 +1072,15 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
 <dd class="expires"><time datetime="2026-08-21">21 August 2026</time></dd>
-<dt class="label-authors">Author:</dt>
+<dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
       <div class="author-name">E. Kline</div>
 <div class="org">Aalyria Technologies, Inc.</div>
+</div>
+<div class="author">
+      <div class="author-name">R. Taylor</div>
+<div class="org">Aalyria Technologies</div>
 </div>
 </dd>
 </dl>
@@ -1082,7 +1088,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <h1 id="title">DTN QUIC Bundle Protocol Convergence Layer (qubicle)</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">TODO Abstract<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security, requiring no application-layer framing for reliable transfers. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTPU) over QUIC datagrams.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1155,30 +1161,86 @@ svg :is([fill="white"], [fill^="#fff"]) {
             <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-operational-considerations" class="internal xref">Operational Considerations</a></p>
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-protocol-overview" class="internal xref">Protocol Overview</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-connection-establishment" class="internal xref">Connection Establishment</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-reliable-bundle-transfer" class="internal xref">Reliable Bundle Transfer</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2.2.1">
+                    <p id="section-toc.1-1.3.2.2.2.1.1"><a href="#section-3.2.1" class="auto internal xref">3.2.1</a>.  <a href="#name-bidirectional-bundle-flow" class="internal xref">Bidirectional Bundle Flow</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2.2.2">
+                    <p id="section-toc.1-1.3.2.2.2.2.1"><a href="#section-3.2.2" class="auto internal xref">3.2.2</a>.  <a href="#name-stream-selection-and-priori" class="internal xref">Stream Selection and Priority</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2.2.3">
+                    <p id="section-toc.1-1.3.2.2.2.3.1"><a href="#section-3.2.3" class="auto internal xref">3.2.3</a>.  <a href="#name-stream-exhaustion" class="internal xref">Stream Exhaustion</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-unreliable-bundle-transfer" class="internal xref">Unreliable Bundle Transfer</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.4">
+                <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-connection-termination" class="internal xref">Connection Termination</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.5">
+                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-keepalive" class="internal xref">Keepalive</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
-            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-node-id-transport-parameter" class="internal xref">Node ID Transport Parameter</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
-            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-error-codes" class="internal xref">Error Codes</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
-            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-references" class="internal xref">References</a></p>
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
-                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-transport-security" class="internal xref">Transport Security</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
-                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-bundle-security" class="internal xref">Bundle Security</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-denial-of-service" class="internal xref">Denial of Service</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-0-rtt-considerations" class="internal xref">0-RTT Considerations</a></p>
 </li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
-            <p id="section-toc.1-1.7.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-alpn-identifier" class="internal xref">ALPN Identifier</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-quic-transport-parameter" class="internal xref">QUIC Transport Parameter</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-application-error-codes" class="internal xref">Application Error Codes</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
 </li>
         </ul>
 </nav>
@@ -1189,7 +1251,21 @@ svg :is([fill="white"], [fill^="#fff"]) {
       <h2 id="name-introduction">
 <a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
       </h2>
-<p id="section-1-1">TODO Introduction<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-1">Bundle Protocol version 7 (BPv7) <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>]</span> requires Convergence Layer Adapters (CLAs) to transfer bundles between nodes. This document specifies a minimal CLA using QUIC <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> that embraces QUIC's native capabilities rather than layering additional protocol machinery.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">The design philosophy is simplicity: QUIC already provides reliable streams, multiplexing, flow control, congestion control, and integrated security. This specification adds only what is strictly necessary to transfer bundles.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The protocol provides two services:<a href="#section-1-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1-4">
+        <dt id="section-1-4.1">Reliable Service:</dt>
+        <dd style="margin-left: 1.5em" id="section-1-4.2">
+          <p id="section-1-4.2.1">Bundles are transferred on QUIC streams with guaranteed delivery.<a href="#section-1-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-1-4.3">Unreliable Service:</dt>
+        <dd style="margin-left: 1.5em" id="section-1-4.4">
+          <p id="section-1-4.4.1">Bundles are transferred via QUIC datagrams <span>[<a href="#RFC9221" class="cite xref">RFC9221</a>]</span> using BTPU <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span> framing.<a href="#section-1-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -1201,58 +1277,339 @@ svg :is([fill="white"], [fill^="#fff"]) {
 "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
 described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
 appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-2">
+        <dt id="section-2-2.1">Client:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.2">
+          <p id="section-2-2.2.1">The Qubicle peer that initiates the QUIC connection. This is a connection-level role and does not imply any restriction on bundle transfer direction.<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.3">Server:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.4">
+          <p id="section-2-2.4.1">The Qubicle peer that accepts the QUIC connection. This is a connection-level role and does not imply any restriction on bundle transfer direction.<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.5">Node ID:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.6">
+          <p id="section-2-2.6.1">A URI that uniquely identifies a Bundle Protocol node, as defined in <span><a href="https://rfc-editor.org/rfc/rfc9171#section-4.2.5.2" class="relref">Section 4.2.5.2</a> of [<a href="#RFC9171" class="cite xref">RFC9171</a>]</span>. For the <code>ipn</code> scheme, a Node ID has service number 0 (e.g., <code>ipn:1.0</code>). For the <code>dtn</code> scheme, a Node ID has an empty demux component (e.g., <code>dtn://node.example/</code>). See <a href="#node-id-parameter" class="auto internal xref">Section 4</a> for the text representation used by this protocol.<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.7">Qubicle Session:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.8">
+          <p id="section-2-2.8.1">The period during which a QUIC connection is established between two Qubicle peers. A session begins when the QUIC handshake completes and ends when the QUIC connection closes. Both client and server are equal peers for the purpose of bundle transfer.<a href="#section-2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
 </section>
 </div>
-<div id="operational-considerations">
+<div id="protocol-overview">
 <section id="section-3">
-      <h2 id="name-operational-considerations">
-<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-operational-considerations" class="section-name selfRef">Operational Considerations</a>
+      <h2 id="name-protocol-overview">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-protocol-overview" class="section-name selfRef">Protocol Overview</a>
       </h2>
-<p id="section-3-1"><span>[<a href="#RFC9308" class="cite xref">RFC9308</a>]</span> references measurements indicating that a single-digit
-percentage of networks block all UDP traffic. Any BP Agent initiating
-a QUIC CL to a peer may encounter this kind of traffic block. While some
-UDP ports might not be blocked, BP Agents <span class="bcp14">SHOULD</span> support a variety of CL
-implementations and be prepared to try alternate CLs in the presence
-of CL-level failures.<a href="#section-3-1" class="pilcrow">¶</a></p>
-<p id="section-3-2">Similarly, BP Agents that offer a listening QUIC CL endpoint <span class="bcp14">SHOULD</span>
-support a variety of CL implementations and be prepared to receive
-other CL connections to support clients in challenged networks.<a href="#section-3-2" class="pilcrow">¶</a></p>
-<p id="section-3-3">A list of recommended CLs and any ordering of preference for their use
-is out of scope of this document.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<div id="connection-establishment">
+<section id="section-3.1">
+        <h3 id="name-connection-establishment">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-connection-establishment" class="section-name selfRef">Connection Establishment</a>
+        </h3>
+<p id="section-3.1-1">A Qubicle session is established by initiating a QUIC connection to a peer. The QUIC handshake provides mutual authentication via TLS 1.3 <span>[<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">The ALPN identifier for Qubicle is <code>qbcl/1</code>.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-3">During connection establishment, peers exchange Node IDs using QUIC Transport Parameters as specified in <a href="#node-id-parameter" class="auto internal xref">Section 4</a>.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reliable-transfer">
+<section id="section-3.2">
+        <h3 id="name-reliable-bundle-transfer">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-reliable-bundle-transfer" class="section-name selfRef">Reliable Bundle Transfer</a>
+        </h3>
+<p id="section-3.2-1">For reliable transfer, each bundle is sent on a dedicated QUIC unidirectional stream:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.2-2">
+<li id="section-3.2-2.1">
+            <p id="section-3.2-2.1.1">The sender creates a new unidirectional stream.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-2.2">
+            <p id="section-3.2-2.2.1">The sender writes the complete bundle (CBOR-encoded per <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>]</span>) to the stream.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.2-2.3">
+            <p id="section-3.2-2.3.1">The sender closes the stream by sending FIN.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-3.2-3">The bundle is implicitly framed by the stream boundaries. No length prefix or application-layer framing is required.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-4">The receiver reads data from the stream until FIN is received, then delivers the complete bundle to the BPA.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-5">QUIC guarantees reliable, in-order delivery of stream data. No application-layer acknowledgment is required; the sender can consider the transfer complete when QUIC confirms the stream data has been acknowledged by the peer.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<div id="bidirectional-bundle-flow">
+<section id="section-3.2.1">
+          <h4 id="name-bidirectional-bundle-flow">
+<a href="#section-3.2.1" class="section-number selfRef">3.2.1. </a><a href="#name-bidirectional-bundle-flow" class="section-name selfRef">Bidirectional Bundle Flow</a>
+          </h4>
+<p id="section-3.2.1-1">Both peers can send bundles simultaneously. Each peer creates unidirectional streams to send its bundles. QUIC stream IDs inherently separate client-initiated streams (IDs 2, 6, 10...) from server-initiated streams (IDs 3, 7, 11...), ensuring no collision between the two directions of bundle flow.<a href="#section-3.2.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stream-selection-and-priority">
+<section id="section-3.2.2">
+          <h4 id="name-stream-selection-and-priori">
+<a href="#section-3.2.2" class="section-number selfRef">3.2.2. </a><a href="#name-stream-selection-and-priori" class="section-name selfRef">Stream Selection and Priority</a>
+          </h4>
+<p id="section-3.2.2-1">Senders <span class="bcp14">MAY</span> use QUIC stream priorities to expedite higher-priority bundles. The mapping of bundle priority to QUIC stream priority is an implementation matter.<a href="#section-3.2.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stream-exhaustion">
+<section id="section-3.2.3">
+          <h4 id="name-stream-exhaustion">
+<a href="#section-3.2.3" class="section-number selfRef">3.2.3. </a><a href="#name-stream-exhaustion" class="section-name selfRef">Stream Exhaustion</a>
+          </h4>
+<p id="section-3.2.3-1">QUIC stream identifiers are 62-bit values, providing an effectively unlimited number of streams per connection. The MAX_STREAMS transport parameter limits concurrent streams, not the total number of streams over a connection's lifetime.<a href="#section-3.2.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.2.3-2">If an implementation reaches practical limits on stream creation, it <span class="bcp14">SHOULD</span> close the connection and establish a new one.<a href="#section-3.2.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="unreliable-transfer">
+<section id="section-3.3">
+        <h3 id="name-unreliable-bundle-transfer">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-unreliable-bundle-transfer" class="section-name selfRef">Unreliable Bundle Transfer</a>
+        </h3>
+<p id="section-3.3-1">For unreliable transfer, bundles are sent using QUIC datagrams <span>[<a href="#RFC9221" class="cite xref">RFC9221</a>]</span> with BTPU <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span> framing.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">Each QUIC datagram contains one or more BTPU messages. The BTPU specification defines segmentation, reassembly, transfer identification, and optional repetition for probabilistic reliability.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+<p id="section-3.3-3">Implementations <span class="bcp14">MUST</span> negotiate the QUIC <code>max_datagram_frame_size</code> transport parameter to enable datagram support.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-4">The mapping of bundle priority to BTPU transfer interleaving is an implementation matter.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="connection-termination">
+<section id="section-3.4">
+        <h3 id="name-connection-termination">
+<a href="#section-3.4" class="section-number selfRef">3.4. </a><a href="#name-connection-termination" class="section-name selfRef">Connection Termination</a>
+        </h3>
+<p id="section-3.4-1">To terminate a session, a peer closes the QUIC connection using CONNECTION_CLOSE. Application-specific error codes are defined in <a href="#error-codes" class="auto internal xref">Section 5</a>.<a href="#section-3.4-1" class="pilcrow">¶</a></p>
+<p id="section-3.4-2">A peer <span class="bcp14">MAY</span> close the connection at any time. In-flight reliable transfers on incomplete streams will fail; the BPA is notified of the failure.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="keepalive">
+<section id="section-3.5">
+        <h3 id="name-keepalive">
+<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-keepalive" class="section-name selfRef">Keepalive</a>
+        </h3>
+<p id="section-3.5-1">Qubicle relies on QUIC's native idle timeout mechanism. Peers negotiate the <code>max_idle_timeout</code> transport parameter during connection establishment.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+<p id="section-3.5-2">If application-layer liveness detection is required, implementations <span class="bcp14">MAY</span> send QUIC PING frames.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="node-id-parameter">
+<section id="section-4">
+      <h2 id="name-node-id-transport-parameter">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-node-id-transport-parameter" class="section-name selfRef">Node ID Transport Parameter</a>
+      </h2>
+<p id="section-4-1">Peers exchange Node IDs during QUIC connection establishment using a new transport parameter.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">The <code>node_id</code> transport parameter (see <a href="#iana-transport-param" class="auto internal xref">Section 7.2</a>) contains the UTF-8 encoded text representation of the sending peer's Node ID. The text representation depends on the URI scheme:<a href="#section-4-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4-3">
+        <dt id="section-4-3.1">
+<code>dtn</code> scheme:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.2">
+          <p id="section-4-3.2.1">Text syntax per <span><a href="https://rfc-editor.org/rfc/rfc9171#section-4.2.5.1.1" class="relref">Section 4.2.5.1.1</a> of [<a href="#RFC9171" class="cite xref">RFC9171</a>]</span>: <code>dtn://&lt;node-name&gt;/</code> where <code>&lt;node-name&gt;</code> identifies the node (e.g., <code>dtn://example.dtn/</code>).<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-3.3">
+<code>ipn</code> scheme:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-3.4">
+          <p id="section-4-3.4.1">Text syntax per <span>[<a href="#RFC9758" class="cite xref">RFC9758</a>], <a href="https://rfc-editor.org/rfc/rfc9758#section-4" class="relref">Section 4</a></span>: <code>ipn:[&lt;allocator&gt;.]&lt;node&gt;.0</code> where the components are non-negative integers and the service number is 0 (e.g., <code>ipn:1.0</code> or <code>ipn:977000.1.0</code>).<a href="#section-4-3.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-4">Implementations <span class="bcp14">SHOULD</span> support both the <code>dtn</code> and <code>ipn</code> URI schemes. Other schemes registered in the "Bundle Protocol URI Scheme Types" registry <span class="bcp14">MAY</span> be supported.<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">The parameter value is encoded as a UTF-8 string without a terminating null character. For example, the Node ID <code>ipn:1.0</code> is encoded as the seven octets <code>0x69 0x70 0x6E 0x3A 0x31 0x2E 0x30</code> ("ipn:1.0").<a href="#section-4-5" class="pilcrow">¶</a></p>
+<p id="section-4-6">A peer <span class="bcp14">MAY</span> omit the <code>node_id</code> parameter to avoid exposing its identity on an untrusted network. If the parameter is omitted or contains a value that cannot be parsed as a Node ID for a supported URI scheme, the peer's Node ID is considered unknown.<a href="#section-4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="error-codes">
+<section id="section-5">
+      <h2 id="name-error-codes">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-error-codes" class="section-name selfRef">Error Codes</a>
+      </h2>
+<p id="section-5-1">The following application error codes are defined for use with QUIC CONNECTION_CLOSE:<a href="#section-5-1" class="pilcrow">¶</a></p>
+<span id="name-qubicle-error-codes"></span><div id="tab-error-codes">
+<table class="left" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-qubicle-error-codes" class="selfRef">Qubicle Error Codes</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Code</th>
+            <th class="text-left" rowspan="1" colspan="1">Name</th>
+            <th class="text-left" rowspan="1" colspan="1">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x00</td>
+            <td class="text-left" rowspan="1" colspan="1">NO_ERROR</td>
+            <td class="text-left" rowspan="1" colspan="1">Graceful closure, no error</td>
+          </tr>
+        </tbody>
+      </table>
+</div>
 </section>
 </div>
 <div id="security-considerations">
-<section id="section-4">
+<section id="section-6">
       <h2 id="name-security-considerations">
-<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
       </h2>
-<p id="section-4-1">TODO Security<a href="#section-4-1" class="pilcrow">¶</a></p>
+<div id="transport-security">
+<section id="section-6.1">
+        <h3 id="name-transport-security">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-transport-security" class="section-name selfRef">Transport Security</a>
+        </h3>
+<p id="section-6.1-1">QUIC mandates TLS 1.3 for all connections, providing confidentiality, integrity, and authentication. Qubicle inherits these security properties.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">Implementations <span class="bcp14">SHOULD</span> require peer certificate authentication. The Node ID in the transport parameter <span class="bcp14">SHOULD</span> match an identity in the peer's certificate. The <code>BundleEID</code> OtherName form defined in <span>[<a href="#RFC9174" class="cite xref">RFC9174</a>], <a href="https://rfc-editor.org/rfc/rfc9174#section-4.4.2" class="relref">Section 4.4.2</a></span> provides a standard mechanism for embedding DTN Node IDs in X.509 certificates. Automated certificate provisioning is available via the ACME extensions defined in <span>[<a href="#RFC9891" class="cite xref">RFC9891</a>]</span>.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="bundle-security">
+<section id="section-6.2">
+        <h3 id="name-bundle-security">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-bundle-security" class="section-name selfRef">Bundle Security</a>
+        </h3>
+<p id="section-6.2-1">Transport security protects bundles in transit between adjacent nodes. For end-to-end bundle security, implementations <span class="bcp14">SHOULD</span> use BPSec <span>[<a href="#RFC9172" class="cite xref">RFC9172</a>]</span>.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="denial-of-service">
+<section id="section-6.3">
+        <h3 id="name-denial-of-service">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-denial-of-service" class="section-name selfRef">Denial of Service</a>
+        </h3>
+<p id="section-6.3-1">QUIC provides built-in protection against many denial-of-service attacks, including address validation and amplification prevention.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<p id="section-6.3-2">Implementations <span class="bcp14">SHOULD</span> apply rate limiting on bundle reception to prevent resource exhaustion.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="rtt-considerations">
+<section id="section-6.4">
+        <h3 id="name-0-rtt-considerations">
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-0-rtt-considerations" class="section-name selfRef">0-RTT Considerations</a>
+        </h3>
+<p id="section-6.4-1">QUIC 0-RTT data is subject to replay attacks. Implementations that enable 0-RTT <span class="bcp14">SHOULD</span> only send bundles that are safe to replay (e.g., bundles with replay protection at the bundle layer).<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="iana-considerations">
-<section id="section-5">
+<section id="section-7">
       <h2 id="name-iana-considerations">
-<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-5-1">This document has no IANA actions.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<div id="alpn-identifier">
+<section id="section-7.1">
+        <h3 id="name-alpn-identifier">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-alpn-identifier" class="section-name selfRef">ALPN Identifier</a>
+        </h3>
+<p id="section-7.1-1">IANA is requested to register the following ALPN identifier in the "TLS Application-Layer Protocol Negotiation (ALPN) Protocol IDs" registry:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<span id="name-alpn-registration"></span><div id="tab-alpn">
+<table class="left" id="table-2">
+          <caption>
+<a href="#table-2" class="selfRef">Table 2</a>:
+<a href="#name-alpn-registration" class="selfRef">ALPN Registration</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Protocol</th>
+              <th class="text-left" rowspan="1" colspan="1">Identification Sequence</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Qubicle</td>
+              <td class="text-left" rowspan="1" colspan="1">0x71 0x62 0x63 0x6C 0x2F 0x31 ("qbcl/1")</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+</section>
+</div>
+<div id="iana-transport-param">
+<section id="section-7.2">
+        <h3 id="name-quic-transport-parameter">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-quic-transport-parameter" class="section-name selfRef">QUIC Transport Parameter</a>
+        </h3>
+<p id="section-7.2-1">IANA is requested to register the following transport parameter in the "QUIC Transport Parameters" registry:<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<span id="name-transport-parameter-registr"></span><div id="tab-transport-param">
+<table class="left" id="table-3">
+          <caption>
+<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#name-transport-parameter-registr" class="selfRef">Transport Parameter Registration</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Value</th>
+              <th class="text-left" rowspan="1" colspan="1">Parameter Name</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">TBD</td>
+              <td class="text-left" rowspan="1" colspan="1">node_id</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+</section>
+</div>
+<div id="application-error-codes">
+<section id="section-7.3">
+        <h3 id="name-application-error-codes">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-application-error-codes" class="section-name selfRef">Application Error Codes</a>
+        </h3>
+<p id="section-7.3-1">IANA is requested to create a new registry "Qubicle Error Codes" with the following initial values:<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+<span id="name-error-code-registry"></span><div id="tab-error-registry">
+<table class="left" id="table-4">
+          <caption>
+<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#name-error-code-registry" class="selfRef">Error Code Registry</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Code</th>
+              <th class="text-left" rowspan="1" colspan="1">Name</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x00</td>
+              <td class="text-left" rowspan="1" colspan="1">NO_ERROR</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x01-0xEF</td>
+              <td class="text-left" rowspan="1" colspan="1">Unassigned</td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0xF0-0xFF</td>
+              <td class="text-left" rowspan="1" colspan="1">Reserved for Private Use</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+</section>
+</div>
 </section>
 </div>
 <div id="sec-combined-references">
-<section id="section-6">
+<section id="section-8">
       <h2 id="name-references">
-<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-references" class="section-name selfRef">References</a>
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-references" class="section-name selfRef">References</a>
       </h2>
 <div id="sec-normative-references">
-<section id="section-6.1">
+<section id="section-8.1">
         <h3 id="name-normative-references">
-<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
-<dt id="BPv7">[BPv7]</dt>
-        <dd>
-<span class="refAuthor">Burleigh, S.</span>, <span class="refAuthor">Fall, K.</span>, and <span class="refAuthor">E. Birrane, III</span>, <span class="refTitle">"Bundle Protocol Version 7"</span>, <span class="seriesInfo">RFC 9171</span>, <span class="seriesInfo">DOI 10.17487/RFC9171</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9171">https://www.rfc-editor.org/rfc/rfc9171</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="BTP-U">[BTP-U]</dt>
+<dt id="I-D.ietf-dtn-btpu">[I-D.ietf-dtn-btpu]</dt>
         <dd>
 <span class="refAuthor">Taylor, R.</span>, <span class="refTitle">"Bundle Transfer Protocol - Unidirectional"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-dtn-btpu-02</span>, <time datetime="2026-02-17" class="refDate">17 February 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-dtn-btpu-02">https://datatracker.ietf.org/doc/html/draft-ietf-dtn-btpu-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
@@ -1261,46 +1618,74 @@ is out of scope of this document.<a href="#section-3-3" class="pilcrow">¶</a></
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8174">[RFC8174]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9000">[RFC9000]</dt>
+        <dd>
+<span class="refAuthor">Iyengar, J., Ed.</span> and <span class="refAuthor">M. Thomson, Ed.</span>, <span class="refTitle">"QUIC: A UDP-Based Multiplexed and Secure Transport"</span>, <span class="seriesInfo">RFC 9000</span>, <span class="seriesInfo">DOI 10.17487/RFC9000</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9000">https://www.rfc-editor.org/rfc/rfc9000</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9001">[RFC9001]</dt>
+        <dd>
+<span class="refAuthor">Thomson, M., Ed.</span> and <span class="refAuthor">S. Turner, Ed.</span>, <span class="refTitle">"Using TLS to Secure QUIC"</span>, <span class="seriesInfo">RFC 9001</span>, <span class="seriesInfo">DOI 10.17487/RFC9001</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9001">https://www.rfc-editor.org/rfc/rfc9001</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9171">[RFC9171]</dt>
+        <dd>
+<span class="refAuthor">Burleigh, S.</span>, <span class="refAuthor">Fall, K.</span>, and <span class="refAuthor">E. Birrane, III</span>, <span class="refTitle">"Bundle Protocol Version 7"</span>, <span class="seriesInfo">RFC 9171</span>, <span class="seriesInfo">DOI 10.17487/RFC9171</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9171">https://www.rfc-editor.org/rfc/rfc9171</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9172">[RFC9172]</dt>
+        <dd>
+<span class="refAuthor">Birrane, III, E.</span> and <span class="refAuthor">K. McKeever</span>, <span class="refTitle">"Bundle Protocol Security (BPSec)"</span>, <span class="seriesInfo">RFC 9172</span>, <span class="seriesInfo">DOI 10.17487/RFC9172</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9172">https://www.rfc-editor.org/rfc/rfc9172</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9221">[RFC9221]</dt>
+        <dd>
+<span class="refAuthor">Pauly, T.</span>, <span class="refAuthor">Kinnear, E.</span>, and <span class="refAuthor">D. Schinazi</span>, <span class="refTitle">"An Unreliable Datagram Extension to QUIC"</span>, <span class="seriesInfo">RFC 9221</span>, <span class="seriesInfo">DOI 10.17487/RFC9221</span>, <time datetime="2022-03" class="refDate">March 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9221">https://www.rfc-editor.org/rfc/rfc9221</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9758">[RFC9758]</dt>
+      <dd>
+<span class="refAuthor">Taylor, R.</span> and <span class="refAuthor">E. Birrane III</span>, <span class="refTitle">"Updates to the 'ipn' URI Scheme"</span>, <span class="seriesInfo">RFC 9758</span>, <span class="seriesInfo">DOI 10.17487/RFC9758</span>, <time datetime="2025-05" class="refDate">May 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9758">https://www.rfc-editor.org/rfc/rfc9758</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
 </div>
 <div id="sec-informative-references">
-<section id="section-6.2">
+<section id="section-8.2">
         <h3 id="name-informative-references">
-<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
-<dt id="RFC9308">[RFC9308]</dt>
+<dt id="RFC9174">[RFC9174]</dt>
+        <dd>
+<span class="refAuthor">Sipos, B.</span>, <span class="refAuthor">Demmer, M.</span>, <span class="refAuthor">Ott, J.</span>, and <span class="refAuthor">S. Perreault</span>, <span class="refTitle">"Delay-Tolerant Networking TCP Convergence-Layer Protocol Version 4"</span>, <span class="seriesInfo">RFC 9174</span>, <span class="seriesInfo">DOI 10.17487/RFC9174</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9174">https://www.rfc-editor.org/rfc/rfc9174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9891">[RFC9891]</dt>
       <dd>
-<span class="refAuthor">Kühlewind, M.</span> and <span class="refAuthor">B. Trammell</span>, <span class="refTitle">"Applicability of the QUIC Transport Protocol"</span>, <span class="seriesInfo">RFC 9308</span>, <span class="seriesInfo">DOI 10.17487/RFC9308</span>, <time datetime="2022-09" class="refDate">September 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9308">https://www.rfc-editor.org/rfc/rfc9308</a>&gt;</span>. </dd>
+<span class="refAuthor">Sipos, B.</span>, <span class="refTitle">"Automated Certificate Management Environment (ACME) Delay-Tolerant Networking (DTN) Node ID Validation Extension"</span>, <span class="seriesInfo">RFC 9891</span>, <span class="seriesInfo">DOI 10.17487/RFC9891</span>, <time datetime="2025-11" class="refDate">November 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9891">https://www.rfc-editor.org/rfc/rfc9891</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
 </div>
 </section>
 </div>
-<div id="acknowledgments">
-<section id="appendix-A">
-      <h2 id="name-acknowledgments">
-<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
-      </h2>
-<p id="appendix-A-1">TODO acknowledge.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-</section>
-</div>
 <div id="authors-addresses">
-<section id="appendix-B">
-      <h2 id="name-authors-address">
-<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+<section id="appendix-A">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
       </h2>
 <address class="vcard">
         <div dir="auto" class="left"><span class="fn nameRole">Erik Kline</span></div>
 <div dir="auto" class="left"><span class="org">Aalyria Technologies, Inc.</span></div>
 <div class="email">
 <span>Email:</span>
-<a href="mailto:ek.ietf@gmail.com" class="email">ek.ietf@gmail.com</a>
+<a href="mailto:&lt;ek.ietf@gmail.com&gt;" class="email">&lt;ek.ietf@gmail.com&gt;</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Rick Taylor</span></div>
+<div dir="auto" class="left"><span class="org">Aalyria Technologies</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:&lt;rtaylor@aalyria.com&gt;" class="email">&lt;rtaylor@aalyria.com&gt;</a>
 </div>
 </address>
 </section>

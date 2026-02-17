@@ -4,8 +4,9 @@
 
 Delay/Disruption Tolerant Networking                            E. Kline
 Internet-Draft                                Aalyria Technologies, Inc.
-Intended status: Standards Track                        17 February 2026
-Expires: 21 August 2026
+Intended status: Standards Track                               R. Taylor
+Expires: 21 August 2026                             Aalyria Technologies
+                                                        17 February 2026
 
 
           DTN QUIC Bundle Protocol Convergence Layer (qubicle)
@@ -13,7 +14,12 @@ Expires: 21 August 2026
 
 Abstract
 
-   TODO Abstract
+   This document specifies a minimal convergence layer protocol for
+   transferring Bundle Protocol version 7 (BPv7) bundles over QUIC.  The
+   protocol leverages QUIC's native capabilities for reliable streaming,
+   connection management, and security, requiring no application-layer
+   framing for reliable transfers.  Unreliable transfers use the Bundle
+   Transfer Protocol - Unidirectional (BTPU) over QUIC datagrams.
 
 About This Document
 
@@ -67,18 +73,51 @@ Table of Contents
 
    1.  Introduction
    2.  Conventions and Definitions
-   3.  Operational Considerations
-   4.  Security Considerations
-   5.  IANA Considerations
-   6.  References
-     6.1.  Normative References
-     6.2.  Informative References
-   Acknowledgments
-   Author's Address
+   3.  Protocol Overview
+     3.1.  Connection Establishment
+     3.2.  Reliable Bundle Transfer
+       3.2.1.  Bidirectional Bundle Flow
+       3.2.2.  Stream Selection and Priority
+       3.2.3.  Stream Exhaustion
+     3.3.  Unreliable Bundle Transfer
+     3.4.  Connection Termination
+     3.5.  Keepalive
+   4.  Node ID Transport Parameter
+   5.  Error Codes
+   6.  Security Considerations
+     6.1.  Transport Security
+     6.2.  Bundle Security
+     6.3.  Denial of Service
+     6.4.  0-RTT Considerations
+   7.  IANA Considerations
+     7.1.  ALPN Identifier
+     7.2.  QUIC Transport Parameter
+     7.3.  Application Error Codes
+   8.  References
+     8.1.  Normative References
+     8.2.  Informative References
+   Authors' Addresses
 
 1.  Introduction
 
-   TODO Introduction
+   Bundle Protocol version 7 (BPv7) [RFC9171] requires Convergence Layer
+   Adapters (CLAs) to transfer bundles between nodes.  This document
+   specifies a minimal CLA using QUIC [RFC9000] that embraces QUIC's
+   native capabilities rather than layering additional protocol
+   machinery.
+
+   The design philosophy is simplicity: QUIC already provides reliable
+   streams, multiplexing, flow control, congestion control, and
+   integrated security.  This specification adds only what is strictly
+   necessary to transfer bundles.
+
+   The protocol provides two services:
+
+   Reliable Service:  Bundles are transferred on QUIC streams with
+      guaranteed delivery.
+
+   Unreliable Service:  Bundles are transferred via QUIC datagrams
+      [RFC9221] using BTPU [I-D.ietf-dtn-btpu] framing.
 
 2.  Conventions and Definitions
 
@@ -88,39 +127,256 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-3.  Operational Considerations
+   Client:  The Qubicle peer that initiates the QUIC connection.  This
+      is a connection-level role and does not imply any restriction on
+      bundle transfer direction.
 
-   [RFC9308] references measurements indicating that a single-digit
-   percentage of networks block all UDP traffic.  Any BP Agent
-   initiating a QUIC CL to a peer may encounter this kind of traffic
-   block.  While some UDP ports might not be blocked, BP Agents SHOULD
-   support a variety of CL implementations and be prepared to try
-   alternate CLs in the presence of CL-level failures.
+   Server:  The Qubicle peer that accepts the QUIC connection.  This is
+      a connection-level role and does not imply any restriction on
+      bundle transfer direction.
 
-   Similarly, BP Agents that offer a listening QUIC CL endpoint SHOULD
-   support a variety of CL implementations and be prepared to receive
-   other CL connections to support clients in challenged networks.
+   Node ID:  A URI that uniquely identifies a Bundle Protocol node, as
+      defined in Section 4.2.5.2 of [RFC9171].  For the ipn scheme, a
+      Node ID has service number 0 (e.g., ipn:1.0).  For the dtn scheme,
+      a Node ID has an empty demux component (e.g.,
+      dtn://node.example/).  See Section 4 for the text representation
+      used by this protocol.
 
-   A list of recommended CLs and any ordering of preference for their
-   use is out of scope of this document.
+   Qubicle Session:  The period during which a QUIC connection is
+      established between two Qubicle peers.  A session begins when the
+      QUIC handshake completes and ends when the QUIC connection closes.
+      Both client and server are equal peers for the purpose of bundle
+      transfer.
 
-4.  Security Considerations
+3.  Protocol Overview
 
-   TODO Security
+3.1.  Connection Establishment
 
-5.  IANA Considerations
+   A Qubicle session is established by initiating a QUIC connection to a
+   peer.  The QUIC handshake provides mutual authentication via TLS 1.3
+   [RFC9001].
 
-   This document has no IANA actions.
+   The ALPN identifier for Qubicle is qbcl/1.
 
-6.  References
+   During connection establishment, peers exchange Node IDs using QUIC
+   Transport Parameters as specified in Section 4.
 
-6.1.  Normative References
+3.2.  Reliable Bundle Transfer
 
-   [BPv7]     Burleigh, S., Fall, K., and E. Birrane, III, "Bundle
-              Protocol Version 7", RFC 9171, DOI 10.17487/RFC9171,
-              January 2022, <https://www.rfc-editor.org/rfc/rfc9171>.
+   For reliable transfer, each bundle is sent on a dedicated QUIC
+   unidirectional stream:
 
-   [BTP-U]    Taylor, R., "Bundle Transfer Protocol - Unidirectional",
+   1.  The sender creates a new unidirectional stream.
+
+   2.  The sender writes the complete bundle (CBOR-encoded per
+       [RFC9171]) to the stream.
+
+   3.  The sender closes the stream by sending FIN.
+
+   The bundle is implicitly framed by the stream boundaries.  No length
+   prefix or application-layer framing is required.
+
+   The receiver reads data from the stream until FIN is received, then
+   delivers the complete bundle to the BPA.
+
+   QUIC guarantees reliable, in-order delivery of stream data.  No
+   application-layer acknowledgment is required; the sender can consider
+   the transfer complete when QUIC confirms the stream data has been
+   acknowledged by the peer.
+
+3.2.1.  Bidirectional Bundle Flow
+
+   Both peers can send bundles simultaneously.  Each peer creates
+   unidirectional streams to send its bundles.  QUIC stream IDs
+   inherently separate client-initiated streams (IDs 2, 6, 10...) from
+   server-initiated streams (IDs 3, 7, 11...), ensuring no collision
+   between the two directions of bundle flow.
+
+3.2.2.  Stream Selection and Priority
+
+   Senders MAY use QUIC stream priorities to expedite higher-priority
+   bundles.  The mapping of bundle priority to QUIC stream priority is
+   an implementation matter.
+
+3.2.3.  Stream Exhaustion
+
+   QUIC stream identifiers are 62-bit values, providing an effectively
+   unlimited number of streams per connection.  The MAX_STREAMS
+   transport parameter limits concurrent streams, not the total number
+   of streams over a connection's lifetime.
+
+   If an implementation reaches practical limits on stream creation, it
+   SHOULD close the connection and establish a new one.
+
+3.3.  Unreliable Bundle Transfer
+
+   For unreliable transfer, bundles are sent using QUIC datagrams
+   [RFC9221] with BTPU [I-D.ietf-dtn-btpu] framing.
+
+   Each QUIC datagram contains one or more BTPU messages.  The BTPU
+   specification defines segmentation, reassembly, transfer
+   identification, and optional repetition for probabilistic
+   reliability.
+
+   Implementations MUST negotiate the QUIC max_datagram_frame_size
+   transport parameter to enable datagram support.
+
+   The mapping of bundle priority to BTPU transfer interleaving is an
+   implementation matter.
+
+3.4.  Connection Termination
+
+   To terminate a session, a peer closes the QUIC connection using
+   CONNECTION_CLOSE.  Application-specific error codes are defined in
+   Section 5.
+
+   A peer MAY close the connection at any time.  In-flight reliable
+   transfers on incomplete streams will fail; the BPA is notified of the
+   failure.
+
+3.5.  Keepalive
+
+   Qubicle relies on QUIC's native idle timeout mechanism.  Peers
+   negotiate the max_idle_timeout transport parameter during connection
+   establishment.
+
+   If application-layer liveness detection is required, implementations
+   MAY send QUIC PING frames.
+
+4.  Node ID Transport Parameter
+
+   Peers exchange Node IDs during QUIC connection establishment using a
+   new transport parameter.
+
+   The node_id transport parameter (see Section 7.2) contains the UTF-8
+   encoded text representation of the sending peer's Node ID.  The text
+   representation depends on the URI scheme:
+
+   dtn scheme:  Text syntax per Section 4.2.5.1.1 of [RFC9171]:
+      dtn://<node-name>/ where <node-name> identifies the node (e.g.,
+      dtn://example.dtn/).
+
+   ipn scheme:  Text syntax per [RFC9758], Section 4:
+      ipn:[<allocator>.]<node>.0 where the components are non-negative
+      integers and the service number is 0 (e.g., ipn:1.0 or
+      ipn:977000.1.0).
+
+   Implementations SHOULD support both the dtn and ipn URI schemes.
+   Other schemes registered in the "Bundle Protocol URI Scheme Types"
+   registry MAY be supported.
+
+   The parameter value is encoded as a UTF-8 string without a
+   terminating null character.  For example, the Node ID ipn:1.0 is
+   encoded as the seven octets 0x69 0x70 0x6E 0x3A 0x31 0x2E 0x30
+   ("ipn:1.0").
+
+   A peer MAY omit the node_id parameter to avoid exposing its identity
+   on an untrusted network.  If the parameter is omitted or contains a
+   value that cannot be parsed as a Node ID for a supported URI scheme,
+   the peer's Node ID is considered unknown.
+
+5.  Error Codes
+
+   The following application error codes are defined for use with QUIC
+   CONNECTION_CLOSE:
+
+   +======+==========+============================+
+   | Code | Name     | Description                |
+   +======+==========+============================+
+   | 0x00 | NO_ERROR | Graceful closure, no error |
+   +------+----------+----------------------------+
+
+             Table 1: Qubicle Error Codes
+
+6.  Security Considerations
+
+6.1.  Transport Security
+
+   QUIC mandates TLS 1.3 for all connections, providing confidentiality,
+   integrity, and authentication.  Qubicle inherits these security
+   properties.
+
+   Implementations SHOULD require peer certificate authentication.  The
+   Node ID in the transport parameter SHOULD match an identity in the
+   peer's certificate.  The BundleEID OtherName form defined in
+   [RFC9174], Section 4.4.2 provides a standard mechanism for embedding
+   DTN Node IDs in X.509 certificates.  Automated certificate
+   provisioning is available via the ACME extensions defined in
+   [RFC9891].
+
+6.2.  Bundle Security
+
+   Transport security protects bundles in transit between adjacent
+   nodes.  For end-to-end bundle security, implementations SHOULD use
+   BPSec [RFC9172].
+
+6.3.  Denial of Service
+
+   QUIC provides built-in protection against many denial-of-service
+   attacks, including address validation and amplification prevention.
+
+   Implementations SHOULD apply rate limiting on bundle reception to
+   prevent resource exhaustion.
+
+6.4.  0-RTT Considerations
+
+   QUIC 0-RTT data is subject to replay attacks.  Implementations that
+   enable 0-RTT SHOULD only send bundles that are safe to replay (e.g.,
+   bundles with replay protection at the bundle layer).
+
+7.  IANA Considerations
+
+7.1.  ALPN Identifier
+
+   IANA is requested to register the following ALPN identifier in the
+   "TLS Application-Layer Protocol Negotiation (ALPN) Protocol IDs"
+   registry:
+
+   +==========+==========================================+===========+
+   | Protocol | Identification Sequence                  | Reference |
+   +==========+==========================================+===========+
+   | Qubicle  | 0x71 0x62 0x63 0x6C 0x2F 0x31 ("qbcl/1") | This      |
+   |          |                                          | document  |
+   +----------+------------------------------------------+-----------+
+
+                        Table 2: ALPN Registration
+
+7.2.  QUIC Transport Parameter
+
+   IANA is requested to register the following transport parameter in
+   the "QUIC Transport Parameters" registry:
+
+   +=======+================+===============+
+   | Value | Parameter Name | Reference     |
+   +=======+================+===============+
+   | TBD   | node_id        | This document |
+   +-------+----------------+---------------+
+
+   Table 3: Transport Parameter Registration
+
+7.3.  Application Error Codes
+
+   IANA is requested to create a new registry "Qubicle Error Codes" with
+   the following initial values:
+
+   +===========+==========================+===============+
+   | Code      | Name                     | Reference     |
+   +===========+==========================+===============+
+   | 0x00      | NO_ERROR                 | This document |
+   +-----------+--------------------------+---------------+
+   | 0x01-0xEF | Unassigned               |               |
+   +-----------+--------------------------+---------------+
+   | 0xF0-0xFF | Reserved for Private Use | This document |
+   +-----------+--------------------------+---------------+
+
+                 Table 4: Error Code Registry
+
+8.  References
+
+8.1.  Normative References
+
+   [I-D.ietf-dtn-btpu]
+              Taylor, R., "Bundle Transfer Protocol - Unidirectional",
               Work in Progress, Internet-Draft, draft-ietf-dtn-btpu-02,
               17 February 2026, <https://datatracker.ietf.org/doc/html/
               draft-ietf-dtn-btpu-02>.
@@ -134,18 +390,51 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-6.2.  Informative References
+   [RFC9000]  Iyengar, J., Ed. and M. Thomson, Ed., "QUIC: A UDP-Based
+              Multiplexed and Secure Transport", RFC 9000,
+              DOI 10.17487/RFC9000, May 2021,
+              <https://www.rfc-editor.org/rfc/rfc9000>.
 
-   [RFC9308]  Kühlewind, M. and B. Trammell, "Applicability of the QUIC
-              Transport Protocol", RFC 9308, DOI 10.17487/RFC9308,
-              September 2022, <https://www.rfc-editor.org/rfc/rfc9308>.
+   [RFC9001]  Thomson, M., Ed. and S. Turner, Ed., "Using TLS to Secure
+              QUIC", RFC 9001, DOI 10.17487/RFC9001, May 2021,
+              <https://www.rfc-editor.org/rfc/rfc9001>.
 
-Acknowledgments
+   [RFC9171]  Burleigh, S., Fall, K., and E. Birrane, III, "Bundle
+              Protocol Version 7", RFC 9171, DOI 10.17487/RFC9171,
+              January 2022, <https://www.rfc-editor.org/rfc/rfc9171>.
 
-   TODO acknowledge.
+   [RFC9172]  Birrane, III, E. and K. McKeever, "Bundle Protocol
+              Security (BPSec)", RFC 9172, DOI 10.17487/RFC9172, January
+              2022, <https://www.rfc-editor.org/rfc/rfc9172>.
 
-Author's Address
+   [RFC9221]  Pauly, T., Kinnear, E., and D. Schinazi, "An Unreliable
+              Datagram Extension to QUIC", RFC 9221,
+              DOI 10.17487/RFC9221, March 2022,
+              <https://www.rfc-editor.org/rfc/rfc9221>.
+
+   [RFC9758]  Taylor, R. and E. Birrane III, "Updates to the 'ipn' URI
+              Scheme", RFC 9758, DOI 10.17487/RFC9758, May 2025,
+              <https://www.rfc-editor.org/rfc/rfc9758>.
+
+8.2.  Informative References
+
+   [RFC9174]  Sipos, B., Demmer, M., Ott, J., and S. Perreault, "Delay-
+              Tolerant Networking TCP Convergence-Layer Protocol Version
+              4", RFC 9174, DOI 10.17487/RFC9174, January 2022,
+              <https://www.rfc-editor.org/rfc/rfc9174>.
+
+   [RFC9891]  Sipos, B., "Automated Certificate Management Environment
+              (ACME) Delay-Tolerant Networking (DTN) Node ID Validation
+              Extension", RFC 9891, DOI 10.17487/RFC9891, November 2025,
+              <https://www.rfc-editor.org/rfc/rfc9891>.
+
+Authors' Addresses
 
    Erik Kline
    Aalyria Technologies, Inc.
-   Email: ek.ietf@gmail.com
+   Email: <ek.ietf@gmail.com>
+
+
+   Rick Taylor
+   Aalyria Technologies
+   Email: <rtaylor@aalyria.com>
