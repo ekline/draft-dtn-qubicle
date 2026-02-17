@@ -28,9 +28,8 @@ venue:
   latest: https://ekline.github.io/draft-dtn-qubicle/draft-ek-dtn-qubicle.html
 
 author:
-
 - fullname: Erik Kline
-  organization: Aalyria Technologies, Inc.
+  organization: Aalyria Technologies
   email: <ek.ietf@gmail.com>
 - fullname: Rick Taylor
   organization: Aalyria Technologies
