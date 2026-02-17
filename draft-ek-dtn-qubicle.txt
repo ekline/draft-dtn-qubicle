@@ -2,10 +2,10 @@
 
 
 
-DTN Working Group                                               E. Kline
+Delay/Disruption Tolerant Networking                            E. Kline
 Internet-Draft                                Aalyria Technologies, Inc.
-Intended status: Informational                           8 November 2025
-Expires: 12 May 2026
+Intended status: Standards Track                        17 February 2026
+Expires: 21 August 2026
 
 
           DTN QUIC Bundle Protocol Convergence Layer (qubicle)
@@ -20,16 +20,17 @@ About This Document
    This note is to be removed before publishing as an RFC.
 
    The latest revision of this draft can be found at
-   https://example.com/LATEST.  Status information for this document may
-   be found at https://datatracker.ietf.org/doc/draft-ek-dtn-qubicle/.
+   https://ekline.github.io/draft-dtn-qubicle/draft-ek-dtn-qubicle.html.
+   Status information for this document may be found at
+   https://datatracker.ietf.org/doc/draft-ek-dtn-qubicle/.
 
-   Discussion of this document takes place on the DTNWG Working Group
-   mailing list (mailto:dtn@ietf.org), which is archived at
-   https://example.com/WG.  Subscribe at
-   https://www.ietf.org/mailman/listinfo/dtn/.
+   Discussion of this document takes place on the Delay/Disruption
+   Tolerant Networking Working Group mailing list (mailto:dtn@ietf.org),
+   which is archived at https://mailarchive.ietf.org/arch/browse/dtn/.
+   Subscribe at https://www.ietf.org/mailman/listinfo/dtn/.
 
    Source for this draft and an issue tracker can be found at
-   https://github.com/USER/REPO.
+   https://github.com/ekline/draft-dtn-qubicle.
 
 Status of This Memo
 
@@ -46,11 +47,11 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 May 2026.
+   This Internet-Draft will expire on 21 August 2026.
 
 Copyright Notice
 
-   Copyright (c) 2025 IETF Trust and the persons identified as the
+   Copyright (c) 2026 IETF Trust and the persons identified as the
    document authors.  All rights reserved.
 
    This document is subject to BCP 78 and the IETF Trust's Legal
@@ -66,9 +67,12 @@ Table of Contents
 
    1.  Introduction
    2.  Conventions and Definitions
-   3.  Security Considerations
-   4.  IANA Considerations
-   5.  Normative References
+   3.  Operational Considerations
+   4.  Security Considerations
+   5.  IANA Considerations
+   6.  References
+     6.1.  Normative References
+     6.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -84,15 +88,42 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-3.  Security Considerations
+3.  Operational Considerations
+
+   [RFC9308] references measurements indicating that a single-digit
+   percentage of networks block all UDP traffic.  Any BP Agent
+   initiating a QUIC CL to a peer may encounter this kind of traffic
+   block.  While some UDP ports might not be blocked, BP Agents SHOULD
+   support a variety of CL implementations and be prepared to try
+   alternate CLs in the presence of CL-level failures.
+
+   Similarly, BP Agents that offer a listening QUIC CL endpoint SHOULD
+   support a variety of CL implementations and be prepared to receive
+   other CL connections to support clients in challenged networks.
+
+   A list of recommended CLs and any ordering of preference for their
+   use is out of scope of this document.
+
+4.  Security Considerations
 
    TODO Security
 
-4.  IANA Considerations
+5.  IANA Considerations
 
    This document has no IANA actions.
 
-5.  Normative References
+6.  References
+
+6.1.  Normative References
+
+   [BPv7]     Burleigh, S., Fall, K., and E. Birrane, III, "Bundle
+              Protocol Version 7", RFC 9171, DOI 10.17487/RFC9171,
+              January 2022, <https://www.rfc-editor.org/rfc/rfc9171>.
+
+   [BTP-U]    Taylor, R., "Bundle Transfer Protocol - Unidirectional",
+              Work in Progress, Internet-Draft, draft-ietf-dtn-btpu-02,
+              17 February 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-dtn-btpu-02>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -102,6 +133,12 @@ Table of Contents
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+6.2.  Informative References
+
+   [RFC9308]  Kühlewind, M. and B. Trammell, "Applicability of the QUIC
+              Transport Protocol", RFC 9308, DOI 10.17487/RFC9308,
+              September 2022, <https://www.rfc-editor.org/rfc/rfc9308>.
 
 Acknowledgments
 
