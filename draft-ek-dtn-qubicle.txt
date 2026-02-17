@@ -3,10 +3,9 @@
 
 
 Delay/Disruption Tolerant Networking                            E. Kline
-Internet-Draft                                Aalyria Technologies, Inc.
-Intended status: Standards Track                               R. Taylor
-Expires: 21 August 2026                             Aalyria Technologies
-                                                        17 February 2026
+Internet-Draft                                                 R. Taylor
+Intended status: Standards Track                    Aalyria Technologies
+Expires: 21 August 2026                                 17 February 2026
 
 
           DTN QUIC Bundle Protocol Convergence Layer (qubicle)
@@ -431,7 +430,7 @@ Table of Contents
 Authors' Addresses
 
    Erik Kline
-   Aalyria Technologies, Inc.
+   Aalyria Technologies
    Email: <ek.ietf@gmail.com>
 
 
