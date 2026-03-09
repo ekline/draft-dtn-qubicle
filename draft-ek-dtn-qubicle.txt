@@ -2,10 +2,10 @@
 
 
 
-Delay/Disruption Tolerant Networking                            E. Kline
-Internet-Draft                                                 R. Taylor
+Delay/Disruption Tolerant Networking                           R. Taylor
+Internet-Draft                                                  E. Kline
 Intended status: Standards Track                    Aalyria Technologies
-Expires: 21 August 2026                                 17 February 2026
+Expires: 10 September 2026                                  9 March 2026
 
 
           DTN QUIC Bundle Protocol Convergence Layer (qubicle)
@@ -18,7 +18,7 @@ Abstract
    protocol leverages QUIC's native capabilities for reliable streaming,
    connection management, and security, requiring no application-layer
    framing for reliable transfers.  Unreliable transfers use the Bundle
-   Transfer Protocol - Unidirectional (BTPU) over QUIC datagrams.
+   Transfer Protocol - Unidirectional (BTP-U) over QUIC datagrams.
 
 About This Document
 
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 21 August 2026.
+   This Internet-Draft will expire on 10 September 2026.
 
 Copyright Notice
 
@@ -88,24 +88,28 @@ Table of Contents
      6.2.  Bundle Security
      6.3.  Denial of Service
      6.4.  0-RTT Considerations
-   7.  IANA Considerations
-     7.1.  ALPN Identifier
-     7.2.  QUIC Transport Parameter
-     7.3.  Application Error Codes
-   8.  References
-     8.1.  Normative References
-     8.2.  Informative References
+   7.  Operational Considerations
+     7.1.  Version Negotiation
+     7.2.  Convergence Layer Fallback
+   8.  IANA Considerations
+     8.1.  ALPN Identifier
+     8.2.  QUIC Transport Parameter
+     8.3.  Application Error Codes
+   9.  References
+     9.1.  Normative References
+     9.2.  Informative References
    Authors' Addresses
 
 1.  Introduction
 
    Bundle Protocol version 7 (BPv7) [RFC9171] requires Convergence Layer
    Adapters (CLAs) to transfer bundles between nodes.  This document
-   specifies a minimal CLA using QUIC [RFC9000] that embraces QUIC's
+   specifies the QUIC Bundle Protocol Convergence Layer (QBCL or
+   "qubicle"), a minimal CLA using QUIC [RFC9000] that embraces QUIC's
    native capabilities rather than layering additional protocol
    machinery.
 
-   The design philosophy is simplicity: QUIC already provides reliable
+   The design philosophy is simple: QUIC already provides reliable
    streams, multiplexing, flow control, congestion control, and
    integrated security.  This specification adds only what is strictly
    necessary to transfer bundles.
@@ -116,7 +120,7 @@ Table of Contents
       guaranteed delivery.
 
    Unreliable Service:  Bundles are transferred via QUIC datagrams
-      [RFC9221] using BTPU [I-D.ietf-dtn-btpu] framing.
+      [RFC9221] using [BTP-U] framing.
 
 2.  Conventions and Definitions
 
@@ -170,7 +174,8 @@ Table of Contents
    2.  The sender writes the complete bundle (CBOR-encoded per
        [RFC9171]) to the stream.
 
-   3.  The sender closes the stream by sending FIN.
+   3.  The sender closes the stream by sending a STREAM frame with the
+       FIN bit set.
 
    The bundle is implicitly framed by the stream boundaries.  No length
    prefix or application-layer framing is required.
@@ -210,17 +215,17 @@ Table of Contents
 3.3.  Unreliable Bundle Transfer
 
    For unreliable transfer, bundles are sent using QUIC datagrams
-   [RFC9221] with BTPU [I-D.ietf-dtn-btpu] framing.
+   [RFC9221] with [BTP-U] framing.
 
-   Each QUIC datagram contains one or more BTPU messages.  The BTPU
-   specification defines segmentation, reassembly, transfer
+   Each QUIC datagram contains one or more [BTP-U] messages.  The
+   [BTP-U] specification defines segmentation, reassembly, transfer
    identification, and optional repetition for probabilistic
    reliability.
 
    Implementations MUST negotiate the QUIC max_datagram_frame_size
    transport parameter to enable datagram support.
 
-   The mapping of bundle priority to BTPU transfer interleaving is an
+   The mapping of bundle priority to [BTP-U] transfer interleaving is an
    implementation matter.
 
 3.4.  Connection Termination
@@ -247,7 +252,7 @@ Table of Contents
    Peers exchange Node IDs during QUIC connection establishment using a
    new transport parameter.
 
-   The node_id transport parameter (see Section 7.2) contains the UTF-8
+   The node_id transport parameter (see Section 8.2) contains the UTF-8
    encoded text representation of the sending peer's Node ID.  The text
    representation depends on the URI scheme:
 
@@ -323,9 +328,24 @@ Table of Contents
    enable 0-RTT SHOULD only send bundles that are safe to replay (e.g.,
    bundles with replay protection at the bundle layer).
 
-7.  IANA Considerations
+7.  Operational Considerations
 
-7.1.  ALPN Identifier
+7.1.  Version Negotiation
+
+   Qubicle endpoints wishing to combat various ossification vectors are
+   RECOMMENDED to support version negotiation and the same Bundle
+   transfer operations described in this memo over QUIC v2 [RFC9369].
+
+7.2.  Convergence Layer Fallback
+
+   As noted in [RFC9308], some networks block UDP traffic such that
+   Qubicle connections cannot be established.  Bundle Protocol Agents
+   that employ Qubicle are RECOMMENDED to support additional Convergence
+   Layers, e.g. TCPCLv4 [RFC9174].
+
+8.  IANA Considerations
+
+8.1.  ALPN Identifier
 
    IANA is requested to register the following ALPN identifier in the
    "TLS Application-Layer Protocol Negotiation (ALPN) Protocol IDs"
@@ -340,7 +360,7 @@ Table of Contents
 
                         Table 2: ALPN Registration
 
-7.2.  QUIC Transport Parameter
+8.2.  QUIC Transport Parameter
 
    IANA is requested to register the following transport parameter in
    the "QUIC Transport Parameters" registry:
@@ -353,7 +373,7 @@ Table of Contents
 
    Table 3: Transport Parameter Registration
 
-7.3.  Application Error Codes
+8.3.  Application Error Codes
 
    IANA is requested to create a new registry "Qubicle Error Codes" with
    the following initial values:
@@ -370,12 +390,11 @@ Table of Contents
 
                  Table 4: Error Code Registry
 
-8.  References
+9.  References
 
-8.1.  Normative References
+9.1.  Normative References
 
-   [I-D.ietf-dtn-btpu]
-              Taylor, R., "Bundle Transfer Protocol - Unidirectional",
+   [BTP-U]    Taylor, R., "Bundle Transfer Protocol - Unidirectional",
               Work in Progress, Internet-Draft, draft-ietf-dtn-btpu-02,
               17 February 2026, <https://datatracker.ietf.org/doc/html/
               draft-ietf-dtn-btpu-02>.
@@ -406,21 +425,29 @@ Table of Contents
               Security (BPSec)", RFC 9172, DOI 10.17487/RFC9172, January
               2022, <https://www.rfc-editor.org/rfc/rfc9172>.
 
+   [RFC9174]  Sipos, B., Demmer, M., Ott, J., and S. Perreault, "Delay-
+              Tolerant Networking TCP Convergence-Layer Protocol Version
+              4", RFC 9174, DOI 10.17487/RFC9174, January 2022,
+              <https://www.rfc-editor.org/rfc/rfc9174>.
+
    [RFC9221]  Pauly, T., Kinnear, E., and D. Schinazi, "An Unreliable
               Datagram Extension to QUIC", RFC 9221,
               DOI 10.17487/RFC9221, March 2022,
               <https://www.rfc-editor.org/rfc/rfc9221>.
 
+   [RFC9369]  Duke, M., "QUIC Version 2", RFC 9369,
+              DOI 10.17487/RFC9369, May 2023,
+              <https://www.rfc-editor.org/rfc/rfc9369>.
+
    [RFC9758]  Taylor, R. and E. Birrane III, "Updates to the 'ipn' URI
               Scheme", RFC 9758, DOI 10.17487/RFC9758, May 2025,
               <https://www.rfc-editor.org/rfc/rfc9758>.
 
-8.2.  Informative References
+9.2.  Informative References
 
-   [RFC9174]  Sipos, B., Demmer, M., Ott, J., and S. Perreault, "Delay-
-              Tolerant Networking TCP Convergence-Layer Protocol Version
-              4", RFC 9174, DOI 10.17487/RFC9174, January 2022,
-              <https://www.rfc-editor.org/rfc/rfc9174>.
+   [RFC9308]  Kühlewind, M. and B. Trammell, "Applicability of the QUIC
+              Transport Protocol", RFC 9308, DOI 10.17487/RFC9308,
+              September 2022, <https://www.rfc-editor.org/rfc/rfc9308>.
 
    [RFC9891]  Sipos, B., "Automated Certificate Management Environment
               (ACME) Delay-Tolerant Networking (DTN) Node ID Validation
@@ -429,11 +456,11 @@ Table of Contents
 
 Authors' Addresses
 
-   Erik Kline
-   Aalyria Technologies
-   Email: <ek.ietf@gmail.com>
-
-
    Rick Taylor
    Aalyria Technologies
    Email: <rtaylor@aalyria.com>
+
+
+   Erik Kline
+   Aalyria Technologies
+   Email: <ek.ietf@gmail.com>
