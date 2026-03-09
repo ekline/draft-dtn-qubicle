@@ -28,24 +28,52 @@ venue:
   latest: https://ekline.github.io/draft-dtn-qubicle/draft-ek-dtn-qubicle.html
 
 author:
-- fullname: Erik Kline
-  organization: Aalyria Technologies
-  email: <ek.ietf@gmail.com>
 - fullname: Rick Taylor
   organization: Aalyria Technologies
   email: <rtaylor@aalyria.com>
+- fullname: Erik Kline
+  organization: Aalyria Technologies
+  email: <ek.ietf@gmail.com>
+
+normative:
+  BTP-U: I-D.ietf-dtn-btpu
+
+informative:
+  RFC9308:
 
 --- abstract
 
-This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security, requiring no application-layer framing for reliable transfers. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTPU) over QUIC datagrams.
+This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security, requiring no application-layer framing for reliable transfers. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTP-U) over QUIC datagrams.
 
 --- middle
 
+<!--
+
+XXX
+
+To be considered:
+
+* Port Selection and ALPN - Protocol identification and negotiation
+* Connection Migration - Handling mobile nodes and NAT rebinding
+* Connection Termination - Graceful shutdown and timeout handling
+
+* receiver shutdown on 2nd bundle
+* DNS SVCB section
+* Node ID parameter in the clear???
+* Error codes???
+* Disambiguation from DTLS-encapsulated UDPCLs if run on the same port:w
+
+-->
+
 # Introduction
 
-Bundle Protocol version 7 (BPv7) {{!RFC9171}} requires Convergence Layer Adapters (CLAs) to transfer bundles between nodes. This document specifies a minimal CLA using QUIC {{!RFC9000}} that embraces QUIC's native capabilities rather than layering additional protocol machinery.
+Bundle Protocol version 7 (BPv7) {{!RFC9171}} requires Convergence Layer
+Adapters (CLAs) to transfer bundles between nodes. This document specifies
+the QUIC Bundle Protocol Convergence Layer (QBCL or "qubicle"),
+a minimal CLA using QUIC {{!RFC9000}} that embraces QUIC's native
+capabilities rather than layering additional protocol machinery.
 
-The design philosophy is simplicity: QUIC already provides reliable streams, multiplexing, flow control, congestion control, and integrated security. This specification adds only what is strictly necessary to transfer bundles.
+The design philosophy is simple: QUIC already provides reliable streams, multiplexing, flow control, congestion control, and integrated security. This specification adds only what is strictly necessary to transfer bundles.
 
 The protocol provides two services:
 
@@ -53,7 +81,7 @@ Reliable Service:
 : Bundles are transferred on QUIC streams with guaranteed delivery.
 
 Unreliable Service:
-: Bundles are transferred via QUIC datagrams {{!RFC9221}} using BTPU {{!I-D.ietf-dtn-btpu}} framing.
+: Bundles are transferred via QUIC datagrams {{!RFC9221}} using {{BTP-U}} framing.
 
 # Conventions and Definitions
 
@@ -87,7 +115,7 @@ For reliable transfer, each bundle is sent on a dedicated QUIC unidirectional st
 
 1. The sender creates a new unidirectional stream.
 2. The sender writes the complete bundle (CBOR-encoded per {{!RFC9171}}) to the stream.
-3. The sender closes the stream by sending FIN.
+3. The sender closes the stream by sending a STREAM frame with the FIN bit set.
 
 The bundle is implicitly framed by the stream boundaries. No length prefix or application-layer framing is required.
 
@@ -111,13 +139,13 @@ If an implementation reaches practical limits on stream creation, it SHOULD clos
 
 ## Unreliable Bundle Transfer {#unreliable-transfer}
 
-For unreliable transfer, bundles are sent using QUIC datagrams {{!RFC9221}} with BTPU {{!I-D.ietf-dtn-btpu}} framing.
+For unreliable transfer, bundles are sent using QUIC datagrams {{!RFC9221}} with {{BTP-U}} framing.
 
-Each QUIC datagram contains one or more BTPU messages. The BTPU specification defines segmentation, reassembly, transfer identification, and optional repetition for probabilistic reliability.
+Each QUIC datagram contains one or more {{BTP-U}} messages. The {{BTP-U}} specification defines segmentation, reassembly, transfer identification, and optional repetition for probabilistic reliability.
 
 Implementations MUST negotiate the QUIC `max_datagram_frame_size` transport parameter to enable datagram support.
 
-The mapping of bundle priority to BTPU transfer interleaving is an implementation matter.
+The mapping of bundle priority to {{BTP-U}} transfer interleaving is an implementation matter.
 
 ## Connection Termination
 
@@ -179,6 +207,21 @@ Implementations SHOULD apply rate limiting on bundle reception to prevent resour
 ## 0-RTT Considerations
 
 QUIC 0-RTT data is subject to replay attacks. Implementations that enable 0-RTT SHOULD only send bundles that are safe to replay (e.g., bundles with replay protection at the bundle layer).
+
+# Operational Considerations
+
+## Version Negotiation
+
+Qubicle endpoints wishing to combat various ossification vectors are
+RECOMMENDED to support version negotiation and the same Bundle transfer
+operations described in this memo over QUIC v2 {{!RFC9369}}.
+
+## Convergence Layer Fallback
+
+As noted in {{RFC9308}}, some networks block UDP traffic such that
+Qubicle connections cannot be established. Bundle Protocol Agents that
+employ Qubicle are RECOMMENDED to support additional Convergence Layers,
+e.g. TCPCLv4 {{!RFC9174}}.
 
 # IANA Considerations
 
