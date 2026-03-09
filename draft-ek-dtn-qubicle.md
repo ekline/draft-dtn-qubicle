@@ -36,6 +36,7 @@ author:
   email: <ek.ietf@gmail.com>
 
 normative:
+  AttrLeaf: RFC8552
   BTP-U: I-D.ietf-dtn-btpu
 
 informative:
@@ -58,10 +59,8 @@ To be considered:
 * Connection Termination - Graceful shutdown and timeout handling
 
 * receiver shutdown on 2nd bundle
-* DNS SVCB section
 * Node ID parameter in the clear???
 * Error codes???
-* Disambiguation from DTLS-encapsulated UDPCLs if run on the same port:w
 
 -->
 
@@ -223,6 +222,37 @@ Qubicle connections cannot be established. Bundle Protocol Agents that
 employ Qubicle are RECOMMENDED to support additional Convergence Layers,
 e.g. TCPCLv4 {{!RFC9174}}.
 
+## Coexistence With Other UDP-based Convergence Layers
+
+It is RECOMMENDED that Qubicle implementations use a dedicated UDP port for
+operational simplicity.
+
+Bundle Protocol Agents that employ Qubicle and other UDP-based Convergence
+Layers on the same UDP port MUST be able to disambiguate received datagrams
+in order to route them to the correct CLA. For UDP CLs that use DTLS,
+{{!RFC9443}} provides the required guidance to disambiguate QUIC traffic
+from DTLS-encapsulated CL traffic.
+
+## Finding a Qubicle Endpoint Via DNS
+
+Qubicle senders should be provisioned with a hostname (or IP addresses)
+and UDP port corresponding to the listening Qubicle endpoint for a peer
+Bundle Protocol Agent. If a hostname is known but a port is not,
+{{!RFC9460}} SVCB Resource Records may be looked up to find a listening
+UDP port and confirm expected ALPN configuration. For example:
+
+```
+cloud-agent.example IN SVCB 1 . (
+    ipv4hint=... ipv6hint=... port=1234 alpn="qbcl/1")
+```
+
+A Qubicle sender might also issue DNS SVCB queries for the {{AttrLeaf}}
+prefix "_qbcl", as in the following example with an AliasMode SVCB record:
+
+```
+_qbcl.orbiter.mars.example IN SVCB 0 cloud-agent.example
+```
+
 # IANA Considerations
 
 ## ALPN Identifier
@@ -233,6 +263,16 @@ IANA is requested to register the following ALPN identifier in the "TLS Applicat
 |----------|------------------------|-----------|
 | Qubicle | 0x71 0x62 0x63 0x6C 0x2F 0x31 ("qbcl/1") | This document |
 {: #tab-alpn align="left" title="ALPN Registration"}
+
+## AttrLeaf Node Name
+
+Per {{AttrLeaf}}, IANA is request to add the following entry to the DNS
+"Underscored and Globally Scoped DNS Node Names" registry:
+
+| RR Type | _NODE NAME | Reference     |
+|---------|------------|---------------|
+| SVCB    | _qbcl      | this document |
+{: #tab-attrleaf align="left" title="AttrLeaf Registration"}
 
 ## QUIC Transport Parameter {#iana-transport-param}
 
