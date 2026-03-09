@@ -91,10 +91,13 @@ Table of Contents
    7.  Operational Considerations
      7.1.  Version Negotiation
      7.2.  Convergence Layer Fallback
+     7.3.  Coexistence With Other UDP-based Convergence Layers
+     7.4.  Finding a Qubicle Endpoint Via DNS
    8.  IANA Considerations
      8.1.  ALPN Identifier
-     8.2.  QUIC Transport Parameter
-     8.3.  Application Error Codes
+     8.2.  AttrLeaf Node Name
+     8.3.  QUIC Transport Parameter
+     8.4.  Application Error Codes
    9.  References
      9.1.  Normative References
      9.2.  Informative References
@@ -252,7 +255,7 @@ Table of Contents
    Peers exchange Node IDs during QUIC connection establishment using a
    new transport parameter.
 
-   The node_id transport parameter (see Section 8.2) contains the UTF-8
+   The node_id transport parameter (see Section 8.3) contains the UTF-8
    encoded text representation of the sending peer's Node ID.  The text
    representation depends on the URI scheme:
 
@@ -343,6 +346,35 @@ Table of Contents
    that employ Qubicle are RECOMMENDED to support additional Convergence
    Layers, e.g. TCPCLv4 [RFC9174].
 
+7.3.  Coexistence With Other UDP-based Convergence Layers
+
+   It is RECOMMENDED that Qubicle implementations use a dedicated UDP
+   port for operational simplicity.
+
+   Bundle Protocol Agents that employ Qubicle and other UDP-based
+   Convergence Layers on the same UDP port MUST be able to disambiguate
+   received datagrams in order to route them to the correct CLA.  For
+   UDP CLs that use DTLS, [RFC9443] provides the required guidance to
+   disambiguate QUIC traffic from DTLS-encapsulated CL traffic.
+
+7.4.  Finding a Qubicle Endpoint Via DNS
+
+   Qubicle senders should be provisioned with a hostname (or IP
+   addresses) and UDP port corresponding to the listening Qubicle
+   endpoint for a peer Bundle Protocol Agent.  If a hostname is known
+   but a port is not, [RFC9460] SVCB Resource Records may be looked up
+   to find a listening UDP port and confirm expected ALPN configuration.
+   For example:
+
+   cloud-agent.example IN SVCB 1 . ( ipv4hint=... ipv6hint=... port=1234
+   alpn="qbcl/1")
+
+   A Qubicle sender might also issue DNS SVCB queries for the [AttrLeaf]
+   prefix "_qbcl", as in the following example with an AliasMode SVCB
+   record:
+
+   _qbcl.orbiter.mars.example IN SVCB 0 cloud-agent.example
+
 8.  IANA Considerations
 
 8.1.  ALPN Identifier
@@ -360,7 +392,20 @@ Table of Contents
 
                         Table 2: ALPN Registration
 
-8.2.  QUIC Transport Parameter
+8.2.  AttrLeaf Node Name
+
+   Per [AttrLeaf], IANA is request to add the following entry to the DNS
+   "Underscored and Globally Scoped DNS Node Names" registry:
+
+   +=========+============+===============+
+   | RR Type | _NODE NAME | Reference     |
+   +=========+============+===============+
+   | SVCB    | _qbcl      | this document |
+   +---------+------------+---------------+
+
+        Table 3: AttrLeaf Registration
+
+8.3.  QUIC Transport Parameter
 
    IANA is requested to register the following transport parameter in
    the "QUIC Transport Parameters" registry:
@@ -371,9 +416,9 @@ Table of Contents
    | TBD   | node_id        | This document |
    +-------+----------------+---------------+
 
-   Table 3: Transport Parameter Registration
+   Table 4: Transport Parameter Registration
 
-8.3.  Application Error Codes
+8.4.  Application Error Codes
 
    IANA is requested to create a new registry "Qubicle Error Codes" with
    the following initial values:
@@ -388,11 +433,16 @@ Table of Contents
    | 0xF0-0xFF | Reserved for Private Use | This document |
    +-----------+--------------------------+---------------+
 
-                 Table 4: Error Code Registry
+                 Table 5: Error Code Registry
 
 9.  References
 
 9.1.  Normative References
+
+   [AttrLeaf] Crocker, D., "Scoped Interpretation of DNS Resource
+              Records through "Underscored" Naming of Attribute Leaves",
+              BCP 222, RFC 8552, DOI 10.17487/RFC8552, March 2019,
+              <https://www.rfc-editor.org/rfc/rfc8552>.
 
    [BTP-U]    Taylor, R., "Bundle Transfer Protocol - Unidirectional",
               Work in Progress, Internet-Draft, draft-ietf-dtn-btpu-02,
@@ -438,6 +488,15 @@ Table of Contents
    [RFC9369]  Duke, M., "QUIC Version 2", RFC 9369,
               DOI 10.17487/RFC9369, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9369>.
+
+   [RFC9443]  Aboba, B., Salgueiro, G., and C. Perkins, "Multiplexing
+              Scheme Updates for QUIC", RFC 9443, DOI 10.17487/RFC9443,
+              July 2023, <https://www.rfc-editor.org/rfc/rfc9443>.
+
+   [RFC9460]  Schwartz, B., Bishop, M., and E. Nygren, "Service Binding
+              and Parameter Specification via the DNS (SVCB and HTTPS
+              Resource Records)", RFC 9460, DOI 10.17487/RFC9460,
+              November 2023, <https://www.rfc-editor.org/rfc/rfc9460>.
 
    [RFC9758]  Taylor, R. and E. Birrane III, "Updates to the 'ipn' URI
               Scheme", RFC 9758, DOI 10.17487/RFC9758, May 2025,
