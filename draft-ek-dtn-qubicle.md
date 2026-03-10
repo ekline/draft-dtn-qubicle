@@ -59,7 +59,6 @@ To be considered:
 * Connection Termination - Graceful shutdown and timeout handling
 
 * receiver shutdown on 2nd bundle
-* Node ID parameter in the clear???
 * Error codes???
 
 -->
@@ -92,9 +91,6 @@ Client:
 Server:
 : The Qubicle peer that accepts the QUIC connection. This is a connection-level role and does not imply any restriction on bundle transfer direction.
 
-Node ID:
-: A URI that uniquely identifies a Bundle Protocol node, as defined in {{Section 4.2.5.2 of !RFC9171}}. For the `ipn` scheme, a Node ID has service number 0 (e.g., `ipn:1.0`). For the `dtn` scheme, a Node ID has an empty demux component (e.g., `dtn://node.example/`). See {{node-id-parameter}} for the text representation used by this protocol.
-
 Qubicle Session:
 : The period during which a QUIC connection is established between two Qubicle peers. A session begins when the QUIC handshake completes and ends when the QUIC connection closes. Both client and server are equal peers for the purpose of bundle transfer.
 
@@ -105,8 +101,6 @@ Qubicle Session:
 A Qubicle session is established by initiating a QUIC connection to a peer. The QUIC handshake provides mutual authentication via TLS 1.3 {{!RFC9001}}.
 
 The ALPN identifier for Qubicle is `qbcl/1`.
-
-During connection establishment, peers exchange Node IDs using QUIC Transport Parameters as specified in {{node-id-parameter}}.
 
 ## Reliable Bundle Transfer {#reliable-transfer}
 
@@ -158,24 +152,6 @@ Qubicle relies on QUIC's native idle timeout mechanism. Peers negotiate the `max
 
 If application-layer liveness detection is required, implementations MAY send QUIC PING frames.
 
-# Node ID Transport Parameter {#node-id-parameter}
-
-Peers exchange Node IDs during QUIC connection establishment using a new transport parameter.
-
-The `node_id` transport parameter (see {{iana-transport-param}}) contains the UTF-8 encoded text representation of the sending peer's Node ID. The text representation depends on the URI scheme:
-
-`dtn` scheme:
-: Text syntax per {{Section 4.2.5.1.1 of !RFC9171}}: `dtn://<node-name>/` where `<node-name>` identifies the node (e.g., `dtn://example.dtn/`).
-
-`ipn` scheme:
-: Text syntax per {{!RFC9758, Section 4}}: `ipn:[<allocator>.]<node>.0` where the components are non-negative integers and the service number is 0 (e.g., `ipn:1.0` or `ipn:977000.1.0`).
-
-Implementations SHOULD support both the `dtn` and `ipn` URI schemes. Other schemes registered in the "Bundle Protocol URI Scheme Types" registry MAY be supported.
-
-The parameter value is encoded as a UTF-8 string without a terminating null character. For example, the Node ID `ipn:1.0` is encoded as the seven octets `0x69 0x70 0x6E 0x3A 0x31 0x2E 0x30` ("ipn:1.0").
-
-A peer MAY omit the `node_id` parameter to avoid exposing its identity on an untrusted network. If the parameter is omitted or contains a value that cannot be parsed as a Node ID for a supported URI scheme, the peer's Node ID is considered unknown.
-
 # Error Codes {#error-codes}
 
 The following application error codes are defined for use with QUIC CONNECTION_CLOSE:
@@ -191,6 +167,7 @@ The following application error codes are defined for use with QUIC CONNECTION_C
 
 QUIC mandates TLS 1.3 for all connections, providing confidentiality, integrity, and authentication. Qubicle inherits these security properties.
 
+<!-- XXX -->
 Implementations SHOULD require peer certificate authentication. The Node ID in the transport parameter SHOULD match an identity in the peer's certificate. The `BundleEID` OtherName form defined in {{?RFC9174, Section 4.4.2}} provides a standard mechanism for embedding DTN Node IDs in X.509 certificates. Automated certificate provisioning is available via the ACME extensions defined in {{?RFC9891}}.
 
 ## Bundle Security
@@ -273,15 +250,6 @@ Per {{AttrLeaf}}, IANA is request to add the following entry to the DNS
 |---------|------------|---------------|
 | SVCB    | _qbcl      | this document |
 {: #tab-attrleaf align="left" title="AttrLeaf Registration"}
-
-## QUIC Transport Parameter {#iana-transport-param}
-
-IANA is requested to register the following transport parameter in the "QUIC Transport Parameters" registry:
-
-| Value | Parameter Name | Reference |
-|-------|----------------|-----------|
-| TBD | node_id | This document |
-{: #tab-transport-param align="left" title="Transport Parameter Registration"}
 
 ## Application Error Codes
 
