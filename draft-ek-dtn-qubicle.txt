@@ -5,7 +5,7 @@
 Delay/Disruption Tolerant Networking                           R. Taylor
 Internet-Draft                                                  E. Kline
 Intended status: Standards Track                    Aalyria Technologies
-Expires: 10 September 2026                                  9 March 2026
+Expires: 11 September 2026                                 10 March 2026
 
 
           DTN QUIC Bundle Protocol Convergence Layer (qubicle)
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 10 September 2026.
+   This Internet-Draft will expire on 11 September 2026.
 
 Copyright Notice
 
@@ -81,26 +81,24 @@ Table of Contents
      3.3.  Unreliable Bundle Transfer
      3.4.  Connection Termination
      3.5.  Keepalive
-   4.  Node ID Transport Parameter
-   5.  Error Codes
-   6.  Security Considerations
-     6.1.  Transport Security
-     6.2.  Bundle Security
-     6.3.  Denial of Service
-     6.4.  0-RTT Considerations
-   7.  Operational Considerations
-     7.1.  Version Negotiation
-     7.2.  Convergence Layer Fallback
-     7.3.  Coexistence With Other UDP-based Convergence Layers
-     7.4.  Finding a Qubicle Endpoint Via DNS
-   8.  IANA Considerations
-     8.1.  ALPN Identifier
-     8.2.  AttrLeaf Node Name
-     8.3.  QUIC Transport Parameter
-     8.4.  Application Error Codes
-   9.  References
-     9.1.  Normative References
-     9.2.  Informative References
+   4.  Error Codes
+   5.  Security Considerations
+     5.1.  Transport Security
+     5.2.  Bundle Security
+     5.3.  Denial of Service
+     5.4.  0-RTT Considerations
+   6.  Operational Considerations
+     6.1.  Version Negotiation
+     6.2.  Convergence Layer Fallback
+     6.3.  Coexistence With Other UDP-based Convergence Layers
+     6.4.  Finding a Qubicle Endpoint Via DNS
+   7.  IANA Considerations
+     7.1.  ALPN Identifier
+     7.2.  AttrLeaf Node Name
+     7.3.  Application Error Codes
+   8.  References
+     8.1.  Normative References
+     8.2.  Informative References
    Authors' Addresses
 
 1.  Introduction
@@ -141,13 +139,6 @@ Table of Contents
       a connection-level role and does not imply any restriction on
       bundle transfer direction.
 
-   Node ID:  A URI that uniquely identifies a Bundle Protocol node, as
-      defined in Section 4.2.5.2 of [RFC9171].  For the ipn scheme, a
-      Node ID has service number 0 (e.g., ipn:1.0).  For the dtn scheme,
-      a Node ID has an empty demux component (e.g.,
-      dtn://node.example/).  See Section 4 for the text representation
-      used by this protocol.
-
    Qubicle Session:  The period during which a QUIC connection is
       established between two Qubicle peers.  A session begins when the
       QUIC handshake completes and ends when the QUIC connection closes.
@@ -163,9 +154,6 @@ Table of Contents
    [RFC9001].
 
    The ALPN identifier for Qubicle is qbcl/1.
-
-   During connection establishment, peers exchange Node IDs using QUIC
-   Transport Parameters as specified in Section 4.
 
 3.2.  Reliable Bundle Transfer
 
@@ -235,7 +223,7 @@ Table of Contents
 
    To terminate a session, a peer closes the QUIC connection using
    CONNECTION_CLOSE.  Application-specific error codes are defined in
-   Section 5.
+   Section 4.
 
    A peer MAY close the connection at any time.  In-flight reliable
    transfers on incomplete streams will fail; the BPA is notified of the
@@ -250,39 +238,7 @@ Table of Contents
    If application-layer liveness detection is required, implementations
    MAY send QUIC PING frames.
 
-4.  Node ID Transport Parameter
-
-   Peers exchange Node IDs during QUIC connection establishment using a
-   new transport parameter.
-
-   The node_id transport parameter (see Section 8.3) contains the UTF-8
-   encoded text representation of the sending peer's Node ID.  The text
-   representation depends on the URI scheme:
-
-   dtn scheme:  Text syntax per Section 4.2.5.1.1 of [RFC9171]:
-      dtn://<node-name>/ where <node-name> identifies the node (e.g.,
-      dtn://example.dtn/).
-
-   ipn scheme:  Text syntax per [RFC9758], Section 4:
-      ipn:[<allocator>.]<node>.0 where the components are non-negative
-      integers and the service number is 0 (e.g., ipn:1.0 or
-      ipn:977000.1.0).
-
-   Implementations SHOULD support both the dtn and ipn URI schemes.
-   Other schemes registered in the "Bundle Protocol URI Scheme Types"
-   registry MAY be supported.
-
-   The parameter value is encoded as a UTF-8 string without a
-   terminating null character.  For example, the Node ID ipn:1.0 is
-   encoded as the seven octets 0x69 0x70 0x6E 0x3A 0x31 0x2E 0x30
-   ("ipn:1.0").
-
-   A peer MAY omit the node_id parameter to avoid exposing its identity
-   on an untrusted network.  If the parameter is omitted or contains a
-   value that cannot be parsed as a Node ID for a supported URI scheme,
-   the peer's Node ID is considered unknown.
-
-5.  Error Codes
+4.  Error Codes
 
    The following application error codes are defined for use with QUIC
    CONNECTION_CLOSE:
@@ -295,9 +251,9 @@ Table of Contents
 
              Table 1: Qubicle Error Codes
 
-6.  Security Considerations
+5.  Security Considerations
 
-6.1.  Transport Security
+5.1.  Transport Security
 
    QUIC mandates TLS 1.3 for all connections, providing confidentiality,
    integrity, and authentication.  Qubicle inherits these security
@@ -311,13 +267,13 @@ Table of Contents
    provisioning is available via the ACME extensions defined in
    [RFC9891].
 
-6.2.  Bundle Security
+5.2.  Bundle Security
 
    Transport security protects bundles in transit between adjacent
    nodes.  For end-to-end bundle security, implementations SHOULD use
    BPSec [RFC9172].
 
-6.3.  Denial of Service
+5.3.  Denial of Service
 
    QUIC provides built-in protection against many denial-of-service
    attacks, including address validation and amplification prevention.
@@ -325,28 +281,28 @@ Table of Contents
    Implementations SHOULD apply rate limiting on bundle reception to
    prevent resource exhaustion.
 
-6.4.  0-RTT Considerations
+5.4.  0-RTT Considerations
 
    QUIC 0-RTT data is subject to replay attacks.  Implementations that
    enable 0-RTT SHOULD only send bundles that are safe to replay (e.g.,
    bundles with replay protection at the bundle layer).
 
-7.  Operational Considerations
+6.  Operational Considerations
 
-7.1.  Version Negotiation
+6.1.  Version Negotiation
 
    Qubicle endpoints wishing to combat various ossification vectors are
    RECOMMENDED to support version negotiation and the same Bundle
    transfer operations described in this memo over QUIC v2 [RFC9369].
 
-7.2.  Convergence Layer Fallback
+6.2.  Convergence Layer Fallback
 
    As noted in [RFC9308], some networks block UDP traffic such that
    Qubicle connections cannot be established.  Bundle Protocol Agents
    that employ Qubicle are RECOMMENDED to support additional Convergence
    Layers, e.g. TCPCLv4 [RFC9174].
 
-7.3.  Coexistence With Other UDP-based Convergence Layers
+6.3.  Coexistence With Other UDP-based Convergence Layers
 
    It is RECOMMENDED that Qubicle implementations use a dedicated UDP
    port for operational simplicity.
@@ -357,7 +313,7 @@ Table of Contents
    UDP CLs that use DTLS, [RFC9443] provides the required guidance to
    disambiguate QUIC traffic from DTLS-encapsulated CL traffic.
 
-7.4.  Finding a Qubicle Endpoint Via DNS
+6.4.  Finding a Qubicle Endpoint Via DNS
 
    Qubicle senders should be provisioned with a hostname (or IP
    addresses) and UDP port corresponding to the listening Qubicle
@@ -375,9 +331,9 @@ Table of Contents
 
    _qbcl.orbiter.mars.example IN SVCB 0 cloud-agent.example
 
-8.  IANA Considerations
+7.  IANA Considerations
 
-8.1.  ALPN Identifier
+7.1.  ALPN Identifier
 
    IANA is requested to register the following ALPN identifier in the
    "TLS Application-Layer Protocol Negotiation (ALPN) Protocol IDs"
@@ -392,7 +348,7 @@ Table of Contents
 
                         Table 2: ALPN Registration
 
-8.2.  AttrLeaf Node Name
+7.2.  AttrLeaf Node Name
 
    Per [AttrLeaf], IANA is request to add the following entry to the DNS
    "Underscored and Globally Scoped DNS Node Names" registry:
@@ -405,20 +361,7 @@ Table of Contents
 
         Table 3: AttrLeaf Registration
 
-8.3.  QUIC Transport Parameter
-
-   IANA is requested to register the following transport parameter in
-   the "QUIC Transport Parameters" registry:
-
-   +=======+================+===============+
-   | Value | Parameter Name | Reference     |
-   +=======+================+===============+
-   | TBD   | node_id        | This document |
-   +-------+----------------+---------------+
-
-   Table 4: Transport Parameter Registration
-
-8.4.  Application Error Codes
+7.3.  Application Error Codes
 
    IANA is requested to create a new registry "Qubicle Error Codes" with
    the following initial values:
@@ -433,11 +376,11 @@ Table of Contents
    | 0xF0-0xFF | Reserved for Private Use | This document |
    +-----------+--------------------------+---------------+
 
-                 Table 5: Error Code Registry
+                 Table 4: Error Code Registry
 
-9.  References
+8.  References
 
-9.1.  Normative References
+8.1.  Normative References
 
    [AttrLeaf] Crocker, D., "Scoped Interpretation of DNS Resource
               Records through "Underscored" Naming of Attribute Leaves",
@@ -498,11 +441,7 @@ Table of Contents
               Resource Records)", RFC 9460, DOI 10.17487/RFC9460,
               November 2023, <https://www.rfc-editor.org/rfc/rfc9460>.
 
-   [RFC9758]  Taylor, R. and E. Birrane III, "Updates to the 'ipn' URI
-              Scheme", RFC 9758, DOI 10.17487/RFC9758, May 2025,
-              <https://www.rfc-editor.org/rfc/rfc9758>.
-
-9.2.  Informative References
+8.2.  Informative References
 
    [RFC9308]  Kühlewind, M. and B. Trammell, "Applicability of the QUIC
               Transport Protocol", RFC 9308, DOI 10.17487/RFC9308,
