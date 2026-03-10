@@ -221,9 +221,10 @@ UDP port and confirm expected ALPN configuration.
 
 Consider this zone file for `example.`:
 
-```
+~~~
 // zone: example.
 //
+$ORIGIN example.
 _dtn-bundle._tcp.mars-orbiter IN SRV 10 20 4556 cloud-agent.example.
 _qbcl.mars-orbiter IN SVCB 0 cloud-agent.example.
 
@@ -233,7 +234,7 @@ cloud-agent IN SVCB 10 . (
     ipv4hint=192.0.2.1
     ipv6hint=2001:db8::1
     port=1234 alpn="qbcl")
-```
+~~~
 
 A BPA supporting both {{!RFC9174}} may attempt to resolve an SRV record
 for the `_dtn-bundle._tcp` prefixed hostname. A BPA that support Qubicle
