@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-03-08T01:02:05.127457+00:00",
+  "timestamp": "2026-03-10T00:56:54.153340+00:00",
   "repo": "ekline/draft-dtn-qubicle",
   "labels": [
     {
@@ -49,7 +49,40 @@
       "color": "ffffff"
     }
   ],
-  "issues": [],
+  "issues": [
+    {
+      "number": 2,
+      "id": "I_kwDOQR8Nj87w-6u7",
+      "title": "receiving more than one bundle on a stream is a protocol error",
+      "url": "https://github.com/ekline/draft-dtn-qubicle/issues/2",
+      "state": "OPEN",
+      "author": "ekline",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Receiving more than one bundle on a stream is a protocol error, and the connection `MUST` be shutdown with an appropriate application error.",
+      "createdAt": "2026-03-09T02:56:50Z",
+      "updatedAt": "2026-03-09T02:56:50Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 3,
+      "id": "I_kwDOQR8Nj87w-8ZP",
+      "title": "describe disambiguation with DTLS when run on the same port",
+      "url": "https://github.com/ekline/draft-dtn-qubicle/issues/3",
+      "state": "OPEN",
+      "author": "ekline",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Cite [RFC 9443](https://datatracker.ietf.org/doc/html/rfc9443)",
+      "createdAt": "2026-03-09T02:59:10Z",
+      "updatedAt": "2026-03-09T02:59:10Z",
+      "closedAt": null,
+      "comments": []
+    }
+  ],
   "pulls": [
     {
       "number": 1,
