@@ -235,6 +235,7 @@ cloud-agent IN SVCB 10 . (
     ipv6hint=2001:db8::1
     port=1234 alpn="qbcl")
 ~~~
+{: artwork-name="dns-zone-example"}
 
 A BPA supporting both {{!RFC9174}} may attempt to resolve an SRV record
 for the `_dtn-bundle._tcp` prefixed hostname. A BPA that support Qubicle
