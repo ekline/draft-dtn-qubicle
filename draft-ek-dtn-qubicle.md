@@ -222,8 +222,8 @@ UDP port and confirm expected ALPN configuration.
 Consider this zone file for `example.`:
 
 ~~~
-// zone: example.
-//
+;; zone: example.
+;
 $ORIGIN example.
 _dtn-bundle._tcp.mars-orbiter IN SRV 10 20 4556 cloud-agent.example.
 _qbcl.mars-orbiter IN SVCB 0 cloud-agent.example.
