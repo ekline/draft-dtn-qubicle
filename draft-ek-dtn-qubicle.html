@@ -1529,25 +1529,29 @@ If only a hostname is known but a port is not, <span>[<a href="#RFC9460" class="
 Resource Records may be looked up to find a listening
 UDP port and confirm expected ALPN configuration.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
 <p id="section-6.4-2">Consider this zone file for <code>example.</code>:<a href="#section-6.4-2" class="pilcrow">¶</a></p>
-<p id="section-6.4-3">```
+<div class="alignLeft art-text artwork" id="section-6.4-3">
+<pre>
 // zone: example.
 //
+$ORIGIN example.
 _dtn-bundle._tcp.mars-orbiter IN SRV 10 20 4556 cloud-agent.example.
-_qbcl.mars-orbiter IN SVCB 0 cloud-agent.example.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
-<p id="section-6.4-4">cloud-agent IN A    192.0.2.1
+_qbcl.mars-orbiter IN SVCB 0 cloud-agent.example.
+
+cloud-agent IN A    192.0.2.1
 cloud-agent IN AAAA 2001:db8::1
 cloud-agent IN SVCB 10 . (
     ipv4hint=192.0.2.1
     ipv6hint=2001:db8::1
     port=1234 alpn="qbcl")
-```<a href="#section-6.4-4" class="pilcrow">¶</a></p>
-<p id="section-6.4-5">A BPA supporting both <span>[<a href="#RFC9174" class="cite xref">RFC9174</a>]</span> may attempt to resolve an SRV record
+</pre><a href="#section-6.4-3" class="pilcrow">¶</a>
+</div>
+<p id="section-6.4-4">A BPA supporting both <span>[<a href="#RFC9174" class="cite xref">RFC9174</a>]</span> may attempt to resolve an SRV record
 for the <code>_dtn-bundle._tcp</code> prefixed hostname. A BPA that support Qubicle
 might also issue DNS SVCB queries for the <span>[<a href="#AttrLeaf" class="cite xref">AttrLeaf</a>]</span> prefix "_qbcl". The
 sample above indicates that <code>mars-orbiter.example.</code> has an SVCB record in
 <code>AliasMode</code> referring to <code>cloud-agent.example.</code>  The SVCB record associated
 with <code>cloud-agent.example.</code> contains all required QUIC transport rendezvous
-information.<a href="#section-6.4-5" class="pilcrow">¶</a></p>
+information.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
