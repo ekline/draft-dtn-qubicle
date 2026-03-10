@@ -1325,7 +1325,7 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-connection-establishment" class="section-name selfRef">Connection Establishment</a>
         </h3>
 <p id="section-3.1-1">A Qubicle session is established by initiating a QUIC connection to a peer. The QUIC handshake provides mutual authentication via TLS 1.3 <span>[<a href="#RFC9001" class="cite xref">RFC9001</a>]</span>.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
-<p id="section-3.1-2">The ALPN identifier for Qubicle is <code>qbcl/1</code>.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">The ALPN identifier for Qubicle is <code>qbcl</code>.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="reliable-transfer">
@@ -1522,20 +1522,32 @@ from DTLS-encapsulated CL traffic.<a href="#section-6.3-2" class="pilcrow">¶</a
         <h3 id="name-finding-a-qubicle-endpoint-">
 <a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-finding-a-qubicle-endpoint-" class="section-name selfRef">Finding a Qubicle Endpoint Via DNS</a>
         </h3>
-<p id="section-6.4-1">Qubicle senders should be provisioned with a hostname (or IP addresses)
-and UDP port corresponding to the listening Qubicle endpoint for a peer
-Bundle Protocol Agent. If a hostname is known but a port is not,
-<span>[<a href="#RFC9460" class="cite xref">RFC9460</a>]</span> SVCB Resource Records may be looked up to find a listening
-UDP port and confirm expected ALPN configuration. For example:<a href="#section-6.4-1" class="pilcrow">¶</a></p>
-<p id="section-6.4-2"><code>
-cloud-agent.example IN SVCB 1 . (
-    ipv4hint=... ipv6hint=... port=1234 alpn="qbcl/1")
-</code><a href="#section-6.4-2" class="pilcrow">¶</a></p>
-<p id="section-6.4-3">A Qubicle sender might also issue DNS SVCB queries for the <span>[<a href="#AttrLeaf" class="cite xref">AttrLeaf</a>]</span>
-prefix "_qbcl", as in the following example with an AliasMode SVCB record:<a href="#section-6.4-3" class="pilcrow">¶</a></p>
-<p id="section-6.4-4"><code>
-_qbcl.orbiter.mars.example IN SVCB 0 cloud-agent.example
-</code><a href="#section-6.4-4" class="pilcrow">¶</a></p>
+<p id="section-6.4-1">Qubicle senders may be manually provisioned with a hostname
+(or IP addresses) and UDP port corresponding to the listening Qubicle
+endpoint for a peer Bundle Protocol Agent.
+If only a hostname is known but a port is not, <span>[<a href="#RFC9460" class="cite xref">RFC9460</a>]</span> SVCB
+Resource Records may be looked up to find a listening
+UDP port and confirm expected ALPN configuration.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2">Consider this zone file for <code>example.</code>:<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+<p id="section-6.4-3">```
+// zone: example.
+//
+_dtn-bundle._tcp.mars-orbiter IN SRV 10 20 4556 cloud-agent.example.
+_qbcl.mars-orbiter IN SVCB 0 cloud-agent.example.<a href="#section-6.4-3" class="pilcrow">¶</a></p>
+<p id="section-6.4-4">cloud-agent IN A    192.0.2.1
+cloud-agent IN AAAA 2001:db8::1
+cloud-agent IN SVCB 10 . (
+    ipv4hint=192.0.2.1
+    ipv6hint=2001:db8::1
+    port=1234 alpn="qbcl")
+```<a href="#section-6.4-4" class="pilcrow">¶</a></p>
+<p id="section-6.4-5">A BPA supporting both <span>[<a href="#RFC9174" class="cite xref">RFC9174</a>]</span> may attempt to resolve an SRV record
+for the <code>_dtn-bundle._tcp</code> prefixed hostname. A BPA that support Qubicle
+might also issue DNS SVCB queries for the <span>[<a href="#AttrLeaf" class="cite xref">AttrLeaf</a>]</span> prefix "_qbcl". The
+sample above indicates that <code>mars-orbiter.example.</code> has an SVCB record in
+<code>AliasMode</code> referring to <code>cloud-agent.example.</code>  The SVCB record associated
+with <code>cloud-agent.example.</code> contains all required QUIC transport rendezvous
+information.<a href="#section-6.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1567,7 +1579,7 @@ _qbcl.orbiter.mars.example IN SVCB 0 cloud-agent.example
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Qubicle</td>
-              <td class="text-left" rowspan="1" colspan="1">0x71 0x62 0x63 0x6C 0x2F 0x31 ("qbcl/1")</td>
+              <td class="text-left" rowspan="1" colspan="1">0x71 0x62 0x63 0x6C ("qbcl")</td>
               <td class="text-left" rowspan="1" colspan="1">This document</td>
             </tr>
           </tbody>
