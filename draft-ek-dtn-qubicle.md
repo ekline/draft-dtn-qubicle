@@ -100,7 +100,7 @@ Qubicle Session:
 
 A Qubicle session is established by initiating a QUIC connection to a peer. The QUIC handshake provides mutual authentication via TLS 1.3 {{!RFC9001}}.
 
-The ALPN identifier for Qubicle is `qbcl/1`.
+The ALPN identifier for Qubicle is `qbcl`.
 
 ## Reliable Bundle Transfer {#reliable-transfer}
 
@@ -212,23 +212,36 @@ from DTLS-encapsulated CL traffic.
 
 ## Finding a Qubicle Endpoint Via DNS
 
-Qubicle senders should be provisioned with a hostname (or IP addresses)
-and UDP port corresponding to the listening Qubicle endpoint for a peer
-Bundle Protocol Agent. If a hostname is known but a port is not,
-{{!RFC9460}} SVCB Resource Records may be looked up to find a listening
-UDP port and confirm expected ALPN configuration. For example:
+Qubicle senders may be manually provisioned with a hostname
+(or IP addresses) and UDP port corresponding to the listening Qubicle
+endpoint for a peer Bundle Protocol Agent.
+If only a hostname is known but a port is not, {{!RFC9460}} SVCB
+Resource Records may be looked up to find a listening
+UDP port and confirm expected ALPN configuration.
+
+Consider this zone file for `example.`:
 
 ```
-cloud-agent.example IN SVCB 1 . (
-    ipv4hint=... ipv6hint=... port=1234 alpn="qbcl/1")
+// zone: example.
+//
+_dtn-bundle._tcp.mars-orbiter IN SRV 10 20 4556 cloud-agent.example.
+_qbcl.mars-orbiter IN SVCB 0 cloud-agent.example.
+
+cloud-agent IN A    192.0.2.1
+cloud-agent IN AAAA 2001:db8::1
+cloud-agent IN SVCB 10 . (
+    ipv4hint=192.0.2.1
+    ipv6hint=2001:db8::1
+    port=1234 alpn="qbcl")
 ```
 
-A Qubicle sender might also issue DNS SVCB queries for the {{AttrLeaf}}
-prefix "_qbcl", as in the following example with an AliasMode SVCB record:
-
-```
-_qbcl.orbiter.mars.example IN SVCB 0 cloud-agent.example
-```
+A BPA supporting both {{!RFC9174}} may attempt to resolve an SRV record
+for the `_dtn-bundle._tcp` prefixed hostname. A BPA that support Qubicle
+might also issue DNS SVCB queries for the {{AttrLeaf}} prefix "_qbcl". The
+sample above indicates that `mars-orbiter.example.` has an SVCB record in
+`AliasMode` referring to `cloud-agent.example.`  The SVCB record associated
+with `cloud-agent.example.` contains all required QUIC transport rendezvous
+information.
 
 # IANA Considerations
 
@@ -238,7 +251,7 @@ IANA is requested to register the following ALPN identifier in the "TLS Applicat
 
 | Protocol | Identification Sequence | Reference |
 |----------|------------------------|-----------|
-| Qubicle | 0x71 0x62 0x63 0x6C 0x2F 0x31 ("qbcl/1") | This document |
+| Qubicle | 0x71 0x62 0x63 0x6C ("qbcl") | This document |
 {: #tab-alpn align="left" title="ALPN Registration"}
 
 ## AttrLeaf Node Name
