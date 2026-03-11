@@ -112,9 +112,11 @@ For reliable transfer, each bundle is sent on a dedicated QUIC unidirectional st
 
 The bundle is implicitly framed by the stream boundaries. No length prefix or application-layer framing is required.
 
-The receiver reads data from the stream until FIN is received, then delivers the complete bundle to the BPA.
+The receiver reads data from the stream until FIN is received, then delivers the complete bundle to the BPA. Receipt of more than one Bundle on a given stream is a protocol error, and the receiver MUST abort the connection with `QBCL_PROTOCOL_ERROR`.
 
 QUIC guarantees reliable, in-order delivery of stream data. No application-layer acknowledgment is required; the sender can consider the transfer complete when QUIC confirms the stream data has been acknowledged by the peer.
+
+TODO(ek): consider explicit application-layer receipt messages, possibly reusing Bundle Status Reports as a mechanism.
 
 ### Bidirectional Bundle Flow
 
@@ -146,6 +148,10 @@ To terminate a session, a peer closes the QUIC connection using CONNECTION_CLOSE
 
 A peer MAY close the connection at any time. In-flight reliable transfers on incomplete streams will fail; the BPA is notified of the failure.
 
+## Transfer Cancellation
+
+TODO(ek): describe how a receiver can cancel a transfer via `STOP_SENDING`.
+
 ## Keepalive
 
 Qubicle relies on QUIC's native idle timeout mechanism. Peers negotiate the `max_idle_timeout` transport parameter during connection establishment.
@@ -158,7 +164,8 @@ The following application error codes are defined for use with QUIC CONNECTION_C
 
 | Code | Name | Description |
 |------|------|-------------|
-| 0x00 | NO_ERROR | Graceful closure, no error |
+| 0x00 | QBCL_NO_ERROR | Graceful closure, no error |
+| 0x01 | QBCL_PROTOCOL_ERROR | Qubicle protocol error encountered |
 {: #tab-error-codes align="left" title="Qubicle Error Codes"}
 
 # Security Considerations
@@ -272,8 +279,9 @@ IANA is requested to create a new registry "Qubicle Error Codes" with the follow
 
 | Code | Name | Reference |
 |------|------|-----------|
-| 0x00 | NO_ERROR | This document |
-| 0x01-0xEF | Unassigned | |
+| 0x00 | QBCL_NO_ERROR | This document |
+| 0x01 | QBCL_PROTOCOL_ERROR | This document |
+| 0x02-0xEF | Unassigned | |
 | 0xF0-0xFF | Reserved for Private Use | This document |
 {: #tab-error-registry align="left" title="Error Code Registry"}
 
