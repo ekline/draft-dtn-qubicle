@@ -1053,7 +1053,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 </tr></thead>
 <tfoot><tr>
 <td class="left">Taylor &amp; Kline</td>
-<td class="center">Expires 11 September 2026</td>
+<td class="center">Expires 12 September 2026</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1066,12 +1066,12 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dd class="internet-draft">draft-ek-dtn-qubicle-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-03-10" class="published">10 March 2026</time>
+<time datetime="2026-03-11" class="published">11 March 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-09-11">11 September 2026</time></dd>
+<dd class="expires"><time datetime="2026-09-12">12 September 2026</time></dd>
 <dt class="label-authors">Authors:</dt>
 <dd class="authors">
 <div class="author">
@@ -1125,7 +1125,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 11 September 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 12 September 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1187,7 +1187,10 @@ svg :is([fill="white"], [fill^="#fff"]) {
                 <p id="section-toc.1-1.3.2.4.1"><a href="#section-3.4" class="auto internal xref">3.4</a>.  <a href="#name-connection-termination" class="internal xref">Connection Termination</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.5">
-                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-keepalive" class="internal xref">Keepalive</a></p>
+                <p id="section-toc.1-1.3.2.5.1"><a href="#section-3.5" class="auto internal xref">3.5</a>.  <a href="#name-transfer-cancellation" class="internal xref">Transfer Cancellation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.6">
+                <p id="section-toc.1-1.3.2.6.1"><a href="#section-3.6" class="auto internal xref">3.6</a>.  <a href="#name-keepalive" class="internal xref">Keepalive</a></p>
 </li>
             </ul>
 </li>
@@ -1346,8 +1349,9 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 </li>
         </ol>
 <p id="section-3.2-3">The bundle is implicitly framed by the stream boundaries. No length prefix or application-layer framing is required.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
-<p id="section-3.2-4">The receiver reads data from the stream until FIN is received, then delivers the complete bundle to the BPA.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-4">The receiver reads data from the stream until FIN is received, then delivers the complete bundle to the BPA. Receipt of more than one Bundle on a given stream is a protocol error, and the receiver <span class="bcp14">MUST</span> abort the connection with <code>QBCL_PROTOCOL_ERROR</code>.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
 <p id="section-3.2-5">QUIC guarantees reliable, in-order delivery of stream data. No application-layer acknowledgment is required; the sender can consider the transfer complete when QUIC confirms the stream data has been acknowledged by the peer.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<p id="section-3.2-6">TODO(ek): consider explicit application-layer receipt messages, possibly reusing Bundle Status Reports as a mechanism.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
 <div id="bidirectional-bundle-flow">
 <section id="section-3.2.1">
           <h4 id="name-bidirectional-bundle-flow">
@@ -1395,13 +1399,21 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
 <p id="section-3.4-2">A peer <span class="bcp14">MAY</span> close the connection at any time. In-flight reliable transfers on incomplete streams will fail; the BPA is notified of the failure.<a href="#section-3.4-2" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="keepalive">
+<div id="transfer-cancellation">
 <section id="section-3.5">
-        <h3 id="name-keepalive">
-<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-keepalive" class="section-name selfRef">Keepalive</a>
+        <h3 id="name-transfer-cancellation">
+<a href="#section-3.5" class="section-number selfRef">3.5. </a><a href="#name-transfer-cancellation" class="section-name selfRef">Transfer Cancellation</a>
         </h3>
-<p id="section-3.5-1">Qubicle relies on QUIC's native idle timeout mechanism. Peers negotiate the <code>max_idle_timeout</code> transport parameter during connection establishment.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
-<p id="section-3.5-2">If application-layer liveness detection is required, implementations <span class="bcp14">MAY</span> send QUIC PING frames.<a href="#section-3.5-2" class="pilcrow">¶</a></p>
+<p id="section-3.5-1">TODO(ek): describe how a receiver can cancel a transfer via <code>STOP_SENDING</code>.<a href="#section-3.5-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="keepalive">
+<section id="section-3.6">
+        <h3 id="name-keepalive">
+<a href="#section-3.6" class="section-number selfRef">3.6. </a><a href="#name-keepalive" class="section-name selfRef">Keepalive</a>
+        </h3>
+<p id="section-3.6-1">Qubicle relies on QUIC's native idle timeout mechanism. Peers negotiate the <code>max_idle_timeout</code> transport parameter during connection establishment.<a href="#section-3.6-1" class="pilcrow">¶</a></p>
+<p id="section-3.6-2">If application-layer liveness detection is required, implementations <span class="bcp14">MAY</span> send QUIC PING frames.<a href="#section-3.6-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1428,8 +1440,13 @@ appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶<
         <tbody>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">0x00</td>
-            <td class="text-left" rowspan="1" colspan="1">NO_ERROR</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_NO_ERROR</td>
             <td class="text-left" rowspan="1" colspan="1">Graceful closure, no error</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x01</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_PROTOCOL_ERROR</td>
+            <td class="text-left" rowspan="1" colspan="1">Qubicle protocol error encountered</td>
           </tr>
         </tbody>
       </table>
@@ -1644,11 +1661,16 @@ information.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
           <tbody>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">0x00</td>
-              <td class="text-left" rowspan="1" colspan="1">NO_ERROR</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_NO_ERROR</td>
               <td class="text-left" rowspan="1" colspan="1">This document</td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">0x01-0xEF</td>
+              <td class="text-left" rowspan="1" colspan="1">0x01</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_PROTOCOL_ERROR</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x02-0xEF</td>
               <td class="text-left" rowspan="1" colspan="1">Unassigned</td>
               <td class="text-left" rowspan="1" colspan="1"> </td>
             </tr>

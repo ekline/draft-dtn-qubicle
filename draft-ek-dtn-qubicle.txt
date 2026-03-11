@@ -5,7 +5,7 @@
 Delay/Disruption Tolerant Networking                           R. Taylor
 Internet-Draft                                                  E. Kline
 Intended status: Standards Track                    Aalyria Technologies
-Expires: 11 September 2026                                 10 March 2026
+Expires: 12 September 2026                                 11 March 2026
 
 
           DTN QUIC Bundle Protocol Convergence Layer (qubicle)
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 11 September 2026.
+   This Internet-Draft will expire on 12 September 2026.
 
 Copyright Notice
 
@@ -80,7 +80,8 @@ Table of Contents
        3.2.3.  Stream Exhaustion
      3.3.  Unreliable Bundle Transfer
      3.4.  Connection Termination
-     3.5.  Keepalive
+     3.5.  Transfer Cancellation
+     3.6.  Keepalive
    4.  Error Codes
    5.  Security Considerations
      5.1.  Transport Security
@@ -172,12 +173,17 @@ Table of Contents
    prefix or application-layer framing is required.
 
    The receiver reads data from the stream until FIN is received, then
-   delivers the complete bundle to the BPA.
+   delivers the complete bundle to the BPA.  Receipt of more than one
+   Bundle on a given stream is a protocol error, and the receiver MUST
+   abort the connection with QBCL_PROTOCOL_ERROR.
 
    QUIC guarantees reliable, in-order delivery of stream data.  No
    application-layer acknowledgment is required; the sender can consider
    the transfer complete when QUIC confirms the stream data has been
    acknowledged by the peer.
+
+   TODO(ek): consider explicit application-layer receipt messages,
+   possibly reusing Bundle Status Reports as a mechanism.
 
 3.2.1.  Bidirectional Bundle Flow
 
@@ -229,7 +235,12 @@ Table of Contents
    transfers on incomplete streams will fail; the BPA is notified of the
    failure.
 
-3.5.  Keepalive
+3.5.  Transfer Cancellation
+
+   TODO(ek): describe how a receiver can cancel a transfer via
+   STOP_SENDING.
+
+3.6.  Keepalive
 
    Qubicle relies on QUIC's native idle timeout mechanism.  Peers
    negotiate the max_idle_timeout transport parameter during connection
@@ -243,13 +254,15 @@ Table of Contents
    The following application error codes are defined for use with QUIC
    CONNECTION_CLOSE:
 
-   +======+==========+============================+
-   | Code | Name     | Description                |
-   +======+==========+============================+
-   | 0x00 | NO_ERROR | Graceful closure, no error |
-   +------+----------+----------------------------+
+   +======+=====================+====================================+
+   | Code | Name                | Description                        |
+   +======+=====================+====================================+
+   | 0x00 | QBCL_NO_ERROR       | Graceful closure, no error         |
+   +------+---------------------+------------------------------------+
+   | 0x01 | QBCL_PROTOCOL_ERROR | Qubicle protocol error encountered |
+   +------+---------------------+------------------------------------+
 
-             Table 1: Qubicle Error Codes
+                       Table 1: Qubicle Error Codes
 
 5.  Security Considerations
 
@@ -382,9 +395,11 @@ Table of Contents
    +===========+==========================+===============+
    | Code      | Name                     | Reference     |
    +===========+==========================+===============+
-   | 0x00      | NO_ERROR                 | This document |
+   | 0x00      | QBCL_NO_ERROR            | This document |
    +-----------+--------------------------+---------------+
-   | 0x01-0xEF | Unassigned               |               |
+   | 0x01      | QBCL_PROTOCOL_ERROR      | This document |
+   +-----------+--------------------------+---------------+
+   | 0x02-0xEF | Unassigned               |               |
    +-----------+--------------------------+---------------+
    | 0xF0-0xFF | Reserved for Private Use | This document |
    +-----------+--------------------------+---------------+
