@@ -30,10 +30,10 @@ venue:
 author:
 - fullname: Rick Taylor
   organization: Aalyria Technologies
-  email: <rtaylor@aalyria.com>
+  email: rtaylor@aalyria.com
 - fullname: Erik Kline
   organization: Aalyria Technologies
-  email: <ek.ietf@gmail.com>
+  email: ek.ietf@gmail.com
 
 normative:
   AttrLeaf: RFC8552
