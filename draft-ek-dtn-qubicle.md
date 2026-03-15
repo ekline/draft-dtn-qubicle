@@ -115,8 +115,11 @@ The bundle is implicitly framed by the stream boundaries. No length prefix or ap
 The receiver reads data from the stream until FIN is received, then delivers the complete bundle to the BPA. Receipt of more than one Bundle on a given stream is a protocol error, and the receiver MUST abort the connection with `QBCL_PROTOCOL_ERROR`.
 
 QUIC guarantees reliable, in-order delivery of stream data. No application-layer acknowledgment is required; the sender can consider the transfer complete when QUIC confirms the stream data has been acknowledged by the peer.
-
-TODO(ek): consider explicit application-layer receipt messages, possibly reusing Bundle Status Reports as a mechanism.
+Completed transfer at the convergence layer does not guarantee successful
+receipt at the receiving Bundle Protocol Agent, so this signal alone does
+not suffice to indicate when a Bundle can be deleted from the sender.
+Additional information at the Bundle Protocol layer is required to confirm
+successful transfer.
 
 ### Bidirectional Bundle Flow
 
