@@ -486,9 +486,9 @@ Authors' Addresses
 
    Rick Taylor
    Aalyria Technologies
-   Email: <rtaylor@aalyria.com>
+   Email: rtaylor@aalyria.com
 
 
    Erik Kline
    Aalyria Technologies
-   Email: <ek.ietf@gmail.com>
+   Email: ek.ietf@gmail.com
