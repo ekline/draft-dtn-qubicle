@@ -5,7 +5,7 @@
 Delay/Disruption Tolerant Networking                           R. Taylor
 Internet-Draft                                                  E. Kline
 Intended status: Standards Track                    Aalyria Technologies
-Expires: 12 September 2026                                 11 March 2026
+Expires: 16 September 2026                                 15 March 2026
 
 
           DTN QUIC Bundle Protocol Convergence Layer (qubicle)
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 12 September 2026.
+   This Internet-Draft will expire on 16 September 2026.
 
 Copyright Notice
 
@@ -180,10 +180,12 @@ Table of Contents
    QUIC guarantees reliable, in-order delivery of stream data.  No
    application-layer acknowledgment is required; the sender can consider
    the transfer complete when QUIC confirms the stream data has been
-   acknowledged by the peer.
-
-   TODO(ek): consider explicit application-layer receipt messages,
-   possibly reusing Bundle Status Reports as a mechanism.
+   acknowledged by the peer.  Completed transfer at the convergence
+   layer does not guarantee successful receipt at the receiving Bundle
+   Protocol Agent, so this signal alone does not suffice to indicate
+   when a Bundle can be deleted from the sender.  Additional information
+   at the Bundle Protocol layer is required to confirm successful
+   transfer.
 
 3.2.1.  Bidirectional Bundle Flow
 
