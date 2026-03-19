@@ -115,6 +115,7 @@ provisioning mechanisms including manual configuration with pre-planned
 contact schedules, contact graph routing protocols that maintain topology
 independently of DNS, or out-of-band metadata distribution through mission
 management plane channels.
+
 A hybrid approach is RECOMMENDED for nodes bridging Internet and
 deep-space networks: use QBCL with DNS discovery for Internet-side
 connections, and use alternate mission management planes for space-side
