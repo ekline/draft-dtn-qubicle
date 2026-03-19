@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-03-10T00:56:54.153340+00:00",
+  "timestamp": "2026-03-19T01:05:39.835301+00:00",
   "repo": "ekline/draft-dtn-qubicle",
   "labels": [
     {
@@ -79,6 +79,22 @@
       "body": "Cite [RFC 9443](https://datatracker.ietf.org/doc/html/rfc9443)",
       "createdAt": "2026-03-09T02:59:10Z",
       "updatedAt": "2026-03-09T02:59:10Z",
+      "closedAt": null,
+      "comments": []
+    },
+    {
+      "number": 4,
+      "id": "I_kwDOQR8Nj87z75-I",
+      "title": "Applicability statement",
+      "url": "https://github.com/ekline/draft-dtn-qubicle/issues/4",
+      "state": "OPEN",
+      "author": "ekline",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "\"QUIC CL and be used wherever QUIC can be used.\"\n\nSee discussion starting from [here](https://mailarchive.ietf.org/arch/msg/dtn/ZLUVxJHM_mApE3dRRooHeIUSx4A/).",
+      "createdAt": "2026-03-18T04:07:06Z",
+      "updatedAt": "2026-03-18T04:07:06Z",
       "closedAt": null,
       "comments": []
     }
