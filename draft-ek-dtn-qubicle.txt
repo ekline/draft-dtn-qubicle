@@ -5,7 +5,7 @@
 Delay/Disruption Tolerant Networking                           R. Taylor
 Internet-Draft                                                  E. Kline
 Intended status: Standards Track                    Aalyria Technologies
-Expires: 16 September 2026                                 15 March 2026
+Expires: 20 September 2026                                 19 March 2026
 
 
           DTN QUIC Bundle Protocol Convergence Layer (qubicle)
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 16 September 2026.
+   This Internet-Draft will expire on 20 September 2026.
 
 Copyright Notice
 
@@ -72,34 +72,35 @@ Table of Contents
 
    1.  Introduction
    2.  Conventions and Definitions
-   3.  Protocol Overview
-     3.1.  Connection Establishment
-     3.2.  Reliable Bundle Transfer
-       3.2.1.  Bidirectional Bundle Flow
-       3.2.2.  Stream Selection and Priority
-       3.2.3.  Stream Exhaustion
-     3.3.  Unreliable Bundle Transfer
-     3.4.  Connection Termination
-     3.5.  Transfer Cancellation
-     3.6.  Keepalive
-   4.  Error Codes
-   5.  Security Considerations
-     5.1.  Transport Security
-     5.2.  Bundle Security
-     5.3.  Denial of Service
-     5.4.  0-RTT Considerations
-   6.  Operational Considerations
-     6.1.  Version Negotiation
-     6.2.  Convergence Layer Fallback
-     6.3.  Coexistence With Other UDP-based Convergence Layers
-     6.4.  Finding a Qubicle Endpoint Via DNS
-   7.  IANA Considerations
-     7.1.  ALPN Identifier
-     7.2.  AttrLeaf Node Name
-     7.3.  Application Error Codes
-   8.  References
-     8.1.  Normative References
-     8.2.  Informative References
+   3.  Applicability Statement
+   4.  Protocol Overview
+     4.1.  Connection Establishment
+     4.2.  Reliable Bundle Transfer
+       4.2.1.  Bidirectional Bundle Flow
+       4.2.2.  Stream Selection and Priority
+       4.2.3.  Stream Exhaustion
+     4.3.  Unreliable Bundle Transfer
+     4.4.  Connection Termination
+     4.5.  Transfer Cancellation
+     4.6.  Keepalive
+   5.  Error Codes
+   6.  Security Considerations
+     6.1.  Transport Security
+     6.2.  Bundle Security
+     6.3.  Denial of Service
+     6.4.  0-RTT Considerations
+   7.  Operational Considerations
+     7.1.  Version Negotiation
+     7.2.  Convergence Layer Fallback
+     7.3.  Coexistence With Other UDP-based Convergence Layers
+     7.4.  Finding a Qubicle Endpoint Via DNS
+   8.  IANA Considerations
+     8.1.  ALPN Identifier
+     8.2.  AttrLeaf Node Name
+     8.3.  Application Error Codes
+   9.  References
+     9.1.  Normative References
+     9.2.  Informative References
    Authors' Addresses
 
 1.  Introduction
@@ -146,9 +147,37 @@ Table of Contents
       Both client and server are equal peers for the purpose of bundle
       transfer.
 
-3.  Protocol Overview
+3.  Applicability Statement
 
-3.1.  Connection Establishment
+   QBCL SHOULD NOT be used in deployments where the QUIC transport may
+   not perform well.  It is primarily targeted to deployments where
+   round-trip times remain under a few seconds, making QUIC's 1-RTT
+   handshake overhead negligible relative to data transfer time.  For
+   extremely high-delay or distrupted environments such as deep space
+   communications (e.g., Earth-Mars links with multi-minute RTTs), any
+   handshake may represent significant absolute delay, and specialized
+   protocols like LTP ({?RFC5326}) may be more appropriate.
+
+   Similarly, the SVCB-based DNS service discovery mechanism ({<dns-
+   example}) SHOULD NOT be used in environments where DNS itself might
+   not perform well.  DNS-based discovery is NOT RECOMMENDED for use in
+   DTN environments where DNS infrastructure is unavailable, network
+   disruptions cause failed lookups or stale cached records, DNSSEC
+   validation fails due to a mismatch between query RTT and valid
+   signature lifetimes, or DNS query overhead is significant relative to
+   available bandwidth.  For such environments, implementations SHOULD
+   support alternative CL provisioning mechanisms including manual
+   configuration with pre-planned contact schedules, contact graph
+   routing protocols that maintain topology independently of DNS, or
+   out-of-band metadata distribution through mission management plane
+   channels.  A hybrid approach is RECOMMENDED for nodes bridging
+   Internet and deep-space networks: use QBCL with DNS discovery for
+   Internet-side connections, and use alternate mission management
+   planes for space-side connections.
+
+4.  Protocol Overview
+
+4.1.  Connection Establishment
 
    A Qubicle session is established by initiating a QUIC connection to a
    peer.  The QUIC handshake provides mutual authentication via TLS 1.3
@@ -156,7 +185,7 @@ Table of Contents
 
    The ALPN identifier for Qubicle is qbcl.
 
-3.2.  Reliable Bundle Transfer
+4.2.  Reliable Bundle Transfer
 
    For reliable transfer, each bundle is sent on a dedicated QUIC
    unidirectional stream:
@@ -187,7 +216,7 @@ Table of Contents
    at the Bundle Protocol layer is required to confirm successful
    transfer.
 
-3.2.1.  Bidirectional Bundle Flow
+4.2.1.  Bidirectional Bundle Flow
 
    Both peers can send bundles simultaneously.  Each peer creates
    unidirectional streams to send its bundles.  QUIC stream IDs
@@ -195,13 +224,13 @@ Table of Contents
    server-initiated streams (IDs 3, 7, 11...), ensuring no collision
    between the two directions of bundle flow.
 
-3.2.2.  Stream Selection and Priority
+4.2.2.  Stream Selection and Priority
 
    Senders MAY use QUIC stream priorities to expedite higher-priority
    bundles.  The mapping of bundle priority to QUIC stream priority is
    an implementation matter.
 
-3.2.3.  Stream Exhaustion
+4.2.3.  Stream Exhaustion
 
    QUIC stream identifiers are 62-bit values, providing an effectively
    unlimited number of streams per connection.  The MAX_STREAMS
@@ -211,7 +240,7 @@ Table of Contents
    If an implementation reaches practical limits on stream creation, it
    SHOULD close the connection and establish a new one.
 
-3.3.  Unreliable Bundle Transfer
+4.3.  Unreliable Bundle Transfer
 
    For unreliable transfer, bundles are sent using QUIC datagrams
    [RFC9221] with [BTP-U] framing.
@@ -227,22 +256,22 @@ Table of Contents
    The mapping of bundle priority to [BTP-U] transfer interleaving is an
    implementation matter.
 
-3.4.  Connection Termination
+4.4.  Connection Termination
 
    To terminate a session, a peer closes the QUIC connection using
    CONNECTION_CLOSE.  Application-specific error codes are defined in
-   Section 4.
+   Section 5.
 
    A peer MAY close the connection at any time.  In-flight reliable
    transfers on incomplete streams will fail; the BPA is notified of the
    failure.
 
-3.5.  Transfer Cancellation
+4.5.  Transfer Cancellation
 
    TODO(ek): describe how a receiver can cancel a transfer via
    STOP_SENDING.
 
-3.6.  Keepalive
+4.6.  Keepalive
 
    Qubicle relies on QUIC's native idle timeout mechanism.  Peers
    negotiate the max_idle_timeout transport parameter during connection
@@ -251,7 +280,7 @@ Table of Contents
    If application-layer liveness detection is required, implementations
    MAY send QUIC PING frames.
 
-4.  Error Codes
+5.  Error Codes
 
    The following application error codes are defined for use with QUIC
    CONNECTION_CLOSE:
@@ -266,9 +295,9 @@ Table of Contents
 
                        Table 1: Qubicle Error Codes
 
-5.  Security Considerations
+6.  Security Considerations
 
-5.1.  Transport Security
+6.1.  Transport Security
 
    QUIC mandates TLS 1.3 for all connections, providing confidentiality,
    integrity, and authentication.  Qubicle inherits these security
@@ -282,13 +311,13 @@ Table of Contents
    provisioning is available via the ACME extensions defined in
    [RFC9891].
 
-5.2.  Bundle Security
+6.2.  Bundle Security
 
    Transport security protects bundles in transit between adjacent
    nodes.  For end-to-end bundle security, implementations SHOULD use
    BPSec [RFC9172].
 
-5.3.  Denial of Service
+6.3.  Denial of Service
 
    QUIC provides built-in protection against many denial-of-service
    attacks, including address validation and amplification prevention.
@@ -296,28 +325,28 @@ Table of Contents
    Implementations SHOULD apply rate limiting on bundle reception to
    prevent resource exhaustion.
 
-5.4.  0-RTT Considerations
+6.4.  0-RTT Considerations
 
    QUIC 0-RTT data is subject to replay attacks.  Implementations that
    enable 0-RTT SHOULD only send bundles that are safe to replay (e.g.,
    bundles with replay protection at the bundle layer).
 
-6.  Operational Considerations
+7.  Operational Considerations
 
-6.1.  Version Negotiation
+7.1.  Version Negotiation
 
    Qubicle endpoints wishing to combat various ossification vectors are
    RECOMMENDED to support version negotiation and the same Bundle
    transfer operations described in this memo over QUIC v2 [RFC9369].
 
-6.2.  Convergence Layer Fallback
+7.2.  Convergence Layer Fallback
 
    As noted in [RFC9308], some networks block UDP traffic such that
    Qubicle connections cannot be established.  Bundle Protocol Agents
    that employ Qubicle are RECOMMENDED to support additional Convergence
    Layers, e.g. TCPCLv4 [RFC9174].
 
-6.3.  Coexistence With Other UDP-based Convergence Layers
+7.3.  Coexistence With Other UDP-based Convergence Layers
 
    It is RECOMMENDED that Qubicle implementations use a dedicated UDP
    port for operational simplicity.
@@ -328,7 +357,9 @@ Table of Contents
    UDP CLs that use DTLS, [RFC9443] provides the required guidance to
    disambiguate QUIC traffic from DTLS-encapsulated CL traffic.
 
-6.4.  Finding a Qubicle Endpoint Via DNS
+7.4.  Finding a Qubicle Endpoint Via DNS
+
+   {#dns-example}
 
    Qubicle senders may be manually provisioned with a hostname (or IP
    addresses) and UDP port corresponding to the listening Qubicle
@@ -360,9 +391,9 @@ Table of Contents
    SVCB record associated with cloud-agent.example. contains all
    required QUIC transport rendezvous information.
 
-7.  IANA Considerations
+8.  IANA Considerations
 
-7.1.  ALPN Identifier
+8.1.  ALPN Identifier
 
    IANA is requested to register the following ALPN identifier in the
    "TLS Application-Layer Protocol Negotiation (ALPN) Protocol IDs"
@@ -376,7 +407,7 @@ Table of Contents
 
                     Table 2: ALPN Registration
 
-7.2.  AttrLeaf Node Name
+8.2.  AttrLeaf Node Name
 
    Per [AttrLeaf], IANA is request to add the following entry to the DNS
    "Underscored and Globally Scoped DNS Node Names" registry:
@@ -389,7 +420,7 @@ Table of Contents
 
         Table 3: AttrLeaf Registration
 
-7.3.  Application Error Codes
+8.3.  Application Error Codes
 
    IANA is requested to create a new registry "Qubicle Error Codes" with
    the following initial values:
@@ -408,9 +439,9 @@ Table of Contents
 
                  Table 4: Error Code Registry
 
-8.  References
+9.  References
 
-8.1.  Normative References
+9.1.  Normative References
 
    [AttrLeaf] Crocker, D., "Scoped Interpretation of DNS Resource
               Records through "Underscored" Naming of Attribute Leaves",
@@ -471,7 +502,7 @@ Table of Contents
               Resource Records)", RFC 9460, DOI 10.17487/RFC9460,
               November 2023, <https://www.rfc-editor.org/rfc/rfc9460>.
 
-8.2.  Informative References
+9.2.  Informative References
 
    [RFC9308]  Kühlewind, M. and B. Trammell, "Applicability of the QUIC
               Transport Protocol", RFC 9308, DOI 10.17487/RFC9308,
