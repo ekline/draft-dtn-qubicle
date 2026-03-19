@@ -54,8 +54,6 @@ XXX
 
 To be considered:
 
-* Port Selection and ALPN - Protocol identification and negotiation
-* Connection Migration - Handling mobile nodes and NAT rebinding
 * Connection Termination - Graceful shutdown and timeout handling
 
 * receiver shutdown on 2nd bundle
@@ -93,6 +91,34 @@ Server:
 
 Qubicle Session:
 : The period during which a QUIC connection is established between two Qubicle peers. A session begins when the QUIC handshake completes and ends when the QUIC connection closes. Both client and server are equal peers for the purpose of bundle transfer.
+
+# Applicability Statement
+
+QBCL SHOULD NOT be used in deployments where the QUIC transport may not
+perform well.  It is primarily targeted to deployments where round-trip
+times remain under a few seconds, making QUIC's 1-RTT handshake overhead
+negligible relative to data transfer time.
+For extremely high-delay or distrupted environments such as deep space
+communications (e.g., Earth-Mars links with multi-minute RTTs),
+any handshake may represent significant absolute delay, and specialized
+protocols like LTP ({?RFC5326}) may be more appropriate.
+
+Similarly, the SVCB-based DNS service discovery mechanism ({<dns-example})
+SHOULD NOT be used in environments where DNS itself might not perform well.
+DNS-based discovery is NOT RECOMMENDED for use in DTN environments where DNS
+infrastructure is unavailable, network disruptions cause failed lookups or
+stale cached records, DNSSEC validation fails due to a mismatch between
+query RTT and valid signature lifetimes, or DNS query overhead is
+significant relative to available bandwidth.
+For such environments, implementations SHOULD support alternative CL
+provisioning mechanisms including manual configuration with pre-planned
+contact schedules, contact graph routing protocols that maintain topology
+independently of DNS, or out-of-band metadata distribution through mission
+management plane channels.
+A hybrid approach is RECOMMENDED for nodes bridging Internet and
+deep-space networks: use QBCL with DNS discovery for Internet-side
+connections, and use alternate mission management planes for space-side
+connections.
 
 # Protocol Overview
 
@@ -221,6 +247,7 @@ in order to route them to the correct CLA. For UDP CLs that use DTLS,
 from DTLS-encapsulated CL traffic.
 
 ## Finding a Qubicle Endpoint Via DNS
+{#dns-example}
 
 Qubicle senders may be manually provisioned with a hostname
 (or IP addresses) and UDP port corresponding to the listening Qubicle
