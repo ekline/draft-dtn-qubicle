@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-03-19T01:05:39.835301+00:00",
+  "timestamp": "2026-03-22T01:05:32.616413+00:00",
   "repo": "ekline/draft-dtn-qubicle",
   "labels": [
     {
@@ -87,14 +87,30 @@
       "id": "I_kwDOQR8Nj87z75-I",
       "title": "Applicability statement",
       "url": "https://github.com/ekline/draft-dtn-qubicle/issues/4",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "ekline",
       "authorAssociation": "OWNER",
       "assignees": [],
       "labels": [],
       "body": "\"QUIC CL and be used wherever QUIC can be used.\"\n\nSee discussion starting from [here](https://mailarchive.ietf.org/arch/msg/dtn/ZLUVxJHM_mApE3dRRooHeIUSx4A/).",
       "createdAt": "2026-03-18T04:07:06Z",
-      "updatedAt": "2026-03-18T04:07:06Z",
+      "updatedAt": "2026-03-19T05:32:30Z",
+      "closedAt": "2026-03-19T05:32:30Z",
+      "comments": []
+    },
+    {
+      "number": 5,
+      "id": "I_kwDOQR8Nj870ZYcR",
+      "title": "explain how cancellation works",
+      "url": "https://github.com/ekline/draft-dtn-qubicle/issues/5",
+      "state": "OPEN",
+      "author": "ekline",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "Cite QUIC semantics that make this possible",
+      "createdAt": "2026-03-19T09:01:43Z",
+      "updatedAt": "2026-03-19T09:01:43Z",
       "closedAt": null,
       "comments": []
     }
