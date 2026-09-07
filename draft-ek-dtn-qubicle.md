@@ -520,8 +520,7 @@ in order to route them to the correct CLA. For UDP CLs that use DTLS,
 {{!RFC9443}} provides the required guidance to disambiguate QUIC traffic
 from DTLS-encapsulated CL traffic.
 
-## Finding a Qubicle Endpoint Via DNS
-{#dns-example}
+## Finding a Qubicle Endpoint Via DNS {#dns-example}
 
 Qubicle senders may be manually provisioned with a hostname
 (or IP addresses) and UDP port corresponding to the listening Qubicle
