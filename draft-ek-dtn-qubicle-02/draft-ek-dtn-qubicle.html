@@ -1,0 +1,2316 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>DTN QUIC Bundle Protocol Convergence Layer (qubicle)</title>
+<meta content="Rick Taylor" name="author">
+<meta content="Erik Kline" name="author">
+<meta content="
+       This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security. Reliable transfers carry each bundle on its own QUIC stream, either directly or wrapped in a single CBOR byte string, with no further application-layer framing. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTP-U) over QUIC datagrams. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="DTN" name="keyword">
+<meta content="BPv7" name="keyword">
+<meta content="QUIC" name="keyword">
+<meta content="Convergence Layer" name="keyword">
+<meta content="draft-ek-dtn-qubicle-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.7
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.7
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.3
+-->
+<link href="draft-ek-dtn-qubicle.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">DTN QUIC CL</td>
+<td class="right">September 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Taylor &amp; Kline</td>
+<td class="center">Expires 11 March 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Delay/Disruption Tolerant Networking</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-ek-dtn-qubicle-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-09-07" class="published">7 September 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-03-11">11 March 2027</time></dd>
+<dt class="label-authors">Authors:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">R. Taylor</div>
+<div class="org">Aalyria Technologies</div>
+</div>
+<div class="author">
+      <div class="author-name">E. Kline</div>
+<div class="org">Aalyria Technologies</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">DTN QUIC Bundle Protocol Convergence Layer (qubicle)</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security. Reliable transfers carry each bundle on its own QUIC stream, either directly or wrapped in a single CBOR byte string, with no further application-layer framing. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTP-U) over QUIC datagrams.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://ekline.github.io/draft-dtn-qubicle/draft-ek-dtn-qubicle.html">https://ekline.github.io/draft-dtn-qubicle/draft-ek-dtn-qubicle.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-ek-dtn-qubicle/">https://datatracker.ietf.org/doc/draft-ek-dtn-qubicle/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">
+        Discussion of this document takes place on the
+        Delay/Disruption Tolerant Networking Working Group mailing list (<span><a href="mailto:dtn@ietf.org">mailto:dtn@ietf.org</a></span>),
+        which is archived at <span><a href="https://mailarchive.ietf.org/arch/browse/dtn/">https://mailarchive.ietf.org/arch/browse/dtn/</a></span>.
+        Subscribe at <span><a href="https://www.ietf.org/mailman/listinfo/dtn/">https://www.ietf.org/mailman/listinfo/dtn/</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+<p id="section-note.1-4">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/ekline/draft-dtn-qubicle">https://github.com/ekline/draft-dtn-qubicle</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 11 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-applicability-statement" class="internal xref">Applicability Statement</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-protocol-overview" class="internal xref">Protocol Overview</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-connection-establishment" class="internal xref">Connection Establishment</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-peer-node-identification" class="internal xref">Peer Node Identification</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-reliable-bundle-transfer" class="internal xref">Reliable Bundle Transfer</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.1">
+                    <p id="section-toc.1-1.4.2.3.2.1.1"><a href="#section-4.3.1" class="auto internal xref">4.3.1</a>.  <a href="#name-transfer-completion" class="internal xref">Transfer Completion</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.2">
+                    <p id="section-toc.1-1.4.2.3.2.2.1"><a href="#section-4.3.2" class="auto internal xref">4.3.2</a>.  <a href="#name-stream-content" class="internal xref">Stream Content</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.3">
+                    <p id="section-toc.1-1.4.2.3.2.3.1"><a href="#section-4.3.3" class="auto internal xref">4.3.3</a>.  <a href="#name-bundle-flow-in-both-directi" class="internal xref">Bundle Flow in Both Directions</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.4">
+                    <p id="section-toc.1-1.4.2.3.2.4.1"><a href="#section-4.3.4" class="auto internal xref">4.3.4</a>.  <a href="#name-stream-selection-and-priori" class="internal xref">Stream Selection and Priority</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.5">
+                    <p id="section-toc.1-1.4.2.3.2.5.1"><a href="#section-4.3.5" class="auto internal xref">4.3.5</a>.  <a href="#name-flow-control-and-stream-lim" class="internal xref">Flow Control and Stream Limits</a></p>
+</li>
+                </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-unreliable-bundle-transfer" class="internal xref">Unreliable Bundle Transfer</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="auto internal xref">4.5</a>.  <a href="#name-connection-termination" class="internal xref">Connection Termination</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.6">
+                <p id="section-toc.1-1.4.2.6.1"><a href="#section-4.6" class="auto internal xref">4.6</a>.  <a href="#name-transfer-cancellation" class="internal xref">Transfer Cancellation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.7">
+                <p id="section-toc.1-1.4.2.7.1"><a href="#section-4.7" class="auto internal xref">4.7</a>.  <a href="#name-keepalive" class="internal xref">Keepalive</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-error-codes" class="internal xref">Error Codes</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-transport-security" class="internal xref">Transport Security</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-bundle-security" class="internal xref">Bundle Security</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-denial-of-service" class="internal xref">Denial of Service</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-0-rtt-considerations" class="internal xref">0-RTT Considerations</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-operational-considerations" class="internal xref">Operational Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="auto internal xref">7.1</a>.  <a href="#name-version-negotiation" class="internal xref">Version Negotiation</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.2">
+                <p id="section-toc.1-1.7.2.2.1"><a href="#section-7.2" class="auto internal xref">7.2</a>.  <a href="#name-timer-and-transport-paramet" class="internal xref">Timer and Transport Parameter Tuning</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.3">
+                <p id="section-toc.1-1.7.2.3.1"><a href="#section-7.3" class="auto internal xref">7.3</a>.  <a href="#name-flow-control-sizing" class="internal xref">Flow Control Sizing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.4">
+                <p id="section-toc.1-1.7.2.4.1"><a href="#section-7.4" class="auto internal xref">7.4</a>.  <a href="#name-convergence-layer-fallback" class="internal xref">Convergence Layer Fallback</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.5">
+                <p id="section-toc.1-1.7.2.5.1"><a href="#section-7.5" class="auto internal xref">7.5</a>.  <a href="#name-coexistence-with-other-udp-" class="internal xref">Coexistence With Other UDP-based Convergence Layers</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7.2.6">
+                <p id="section-toc.1-1.7.2.6.1"><a href="#section-7.6" class="auto internal xref">7.6</a>.  <a href="#name-finding-a-qubicle-endpoint-" class="internal xref">Finding a Qubicle Endpoint Via DNS</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-alpn-identifier" class="internal xref">ALPN Identifier</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-attrleaf-node-name" class="internal xref">AttrLeaf Node Name</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-application-error-codes" class="internal xref">Application Error Codes</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-authors-addresses" class="internal xref">Authors' Addresses</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">Bundle Protocol version 7 (BPv7) <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>]</span> requires Convergence Layer
+Adapters (CLAs) to transfer bundles between nodes. This document specifies
+the QUIC Bundle Protocol Convergence Layer, referred to in this document as
+"Qubicle", a minimal CLA using QUIC <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> that embraces QUIC's native
+capabilities rather than layering additional protocol machinery.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">The design philosophy is simple: QUIC already provides reliable streams, multiplexing, flow control, congestion control, and integrated security. This specification adds only what is strictly necessary to transfer bundles.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">The protocol provides two services:<a href="#section-1-3" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1-4">
+        <dt id="section-1-4.1">Reliable Service:</dt>
+        <dd style="margin-left: 1.5em" id="section-1-4.2">
+          <p id="section-1-4.2.1">Bundles are transferred on QUIC streams with guaranteed delivery, one bundle per stream.<a href="#section-1-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-1-4.3">Unreliable Service:</dt>
+        <dd style="margin-left: 1.5em" id="section-1-4.4">
+          <p id="section-1-4.4.1">Bundles are transferred via QUIC datagrams <span>[<a href="#RFC9221" class="cite xref">RFC9221</a>]</span> using <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> framing.<a href="#section-1-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2-2">
+        <dt id="section-2-2.1">BPA:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.2">
+          <p id="section-2-2.2.1">Bundle Protocol Agent, as defined in <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>]</span>.<a href="#section-2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.3">CLA:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.4">
+          <p id="section-2-2.4.1">Convergence Layer Adapter, as defined in <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>]</span>. Also abbreviated
+"CL" where the context is clear.<a href="#section-2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.5">Client:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.6">
+          <p id="section-2-2.6.1">The Qubicle peer that initiates the QUIC connection. This is a connection-level role and does not imply any restriction on bundle transfer direction.<a href="#section-2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.7">Server:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.8">
+          <p id="section-2-2.8.1">The Qubicle peer that accepts the QUIC connection. This is a connection-level role and does not imply any restriction on bundle transfer direction.<a href="#section-2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-2-2.9">Qubicle Session:</dt>
+        <dd style="margin-left: 1.5em" id="section-2-2.10">
+          <p id="section-2-2.10.1">The period during which a QUIC connection is established between two Qubicle peers. A session begins when the QUIC handshake completes and ends when the QUIC connection closes. Both client and server are equal peers for the purpose of bundle transfer.<a href="#section-2-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="applicability">
+<section id="section-3">
+      <h2 id="name-applicability-statement">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-applicability-statement" class="section-name selfRef">Applicability Statement</a>
+      </h2>
+<p id="section-3-1">Qubicle adds no transport machinery of its own, so its applicability to a
+given environment is that of QUIC itself: Qubicle <span class="bcp14">SHOULD NOT</span> be used where
+the QUIC transport cannot be expected to perform well. With the default
+transport parameters and timer values of general-purpose QUIC
+implementations, this primarily means deployments where round-trip times
+(RTTs) remain under a few seconds, so that QUIC's handshake and loss-recovery
+behavior are well matched to the path.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<p id="section-3-2">This boundary is not fixed. QUIC's transport parameters and timers can be
+adjusted to longer-delay paths (<a href="#timer-tuning" class="auto internal xref">Section 7.2</a>), and a profile of QUIC
+developed for a particular environment, whether by tuning, by use of
+optional QUIC features such as 0-RTT resumption (<a href="#zero-rtt" class="auto internal xref">Section 6.4</a>), or by other
+means, applies to Qubicle sessions without modification. Where such a
+profile exists for an environment, Qubicle's applicability follows it. For
+extremely high-delay or disrupted environments such as deep space
+communications (e.g., Earth-Mars links with multi-minute RTTs) in the
+absence of such a profile, specialized protocols like the Licklider
+Transmission Protocol (LTP) <span>[<a href="#RFC5326" class="cite xref">RFC5326</a>]</span> may be more appropriate.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<p id="section-3-3">Similarly, the SVCB-based DNS service discovery mechanism (<a href="#dns-example" class="auto internal xref">Section 7.6</a>)
+<span class="bcp14">SHOULD NOT</span> be used in environments where DNS itself might not perform well.
+DNS-based discovery is <span class="bcp14">NOT RECOMMENDED</span> for use in DTN environments where DNS
+infrastructure is unavailable, network disruptions cause failed lookups or
+stale cached records, DNSSEC validation fails due to a mismatch between
+query RTT and valid signature lifetimes, or DNS query overhead is
+significant relative to available bandwidth.
+For such environments, implementations <span class="bcp14">SHOULD</span> support alternative CL
+provisioning mechanisms including manual configuration with pre-planned
+contact schedules, contact graph routing protocols that maintain topology
+independently of DNS, or out-of-band metadata distribution through mission
+management plane channels.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">A hybrid approach is <span class="bcp14">RECOMMENDED</span> for nodes bridging Internet and
+deep-space networks: use Qubicle with DNS discovery for Internet-side
+connections, and use alternate mission management planes for space-side
+connections.<a href="#section-3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="protocol-overview">
+<section id="section-4">
+      <h2 id="name-protocol-overview">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-protocol-overview" class="section-name selfRef">Protocol Overview</a>
+      </h2>
+<div id="connection-establishment">
+<section id="section-4.1">
+        <h3 id="name-connection-establishment">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-connection-establishment" class="section-name selfRef">Connection Establishment</a>
+        </h3>
+<p id="section-4.1-1">A Qubicle session is established by initiating a QUIC connection to a peer. The QUIC handshake authenticates both peers via TLS 1.3 <span>[<a href="#RFC9001" class="cite xref">RFC9001</a>]</span> as described in <a href="#peer-node-id" class="auto internal xref">Section 4.2</a>.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">The ALPN identifier for Qubicle is <code>qbcl</code>.<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="peer-node-id">
+<section id="section-4.2">
+        <h3 id="name-peer-node-identification">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-peer-node-identification" class="section-name selfRef">Peer Node Identification</a>
+        </h3>
+<p id="section-4.2-1">Qubicle does not exchange Node IDs in-band. A peer's Node ID is the Node ID
+carried in the <code>BundleEID</code> OtherName (<span>[<a href="#RFC9174" class="cite xref">RFC9174</a>], <a href="https://rfc-editor.org/rfc/rfc9174#section-4.4.2" class="relref">Section 4.4.2</a></span>) of the
+certificate it presents during the TLS handshake. Accordingly, both client
+and server <span class="bcp14">MUST</span> present a certificate containing a <code>BundleEID</code> OtherName,
+and each peer <span class="bcp14">MUST</span> validate the certificate of the other as described in
+<a href="#transport-security" class="auto internal xref">Section 6.1</a>.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">The sole exception is a deployment in which a peer has already been
+configured with the Node ID of the remote peer by other means (e.g., a
+contact plan or manual configuration keyed on the remote address). Such a
+peer <span class="bcp14">MAY</span> accept a certificate lacking a <code>BundleEID</code> OtherName and associate
+the configured Node ID with the session instead. If the peer has a configured
+Node ID and the certificate also contains a <code>BundleEID</code> OtherName, the two
+<span class="bcp14">MUST</span> match; a mismatch <span class="bcp14">MUST</span> be treated as a certificate validation failure
+and the handshake terminated.<a href="#section-4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.2-3">The means by which a peer obtains the rendezvous information (address and
+port) for a remote Node ID, whether by manual configuration, contact plan,
+or DNS (see <a href="#dns-example" class="auto internal xref">Section 7.6</a>), is independent of the identification
+mechanism above. Rendezvous information locates a candidate peer; only the
+authenticated certificate establishes which Node ID has actually been
+reached.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reliable-transfer">
+<section id="section-4.3">
+        <h3 id="name-reliable-bundle-transfer">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-reliable-bundle-transfer" class="section-name selfRef">Reliable Bundle Transfer</a>
+        </h3>
+<p id="section-4.3-1">For reliable transfer, each bundle is sent on a dedicated QUIC unidirectional stream:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.3-2">
+<li id="section-4.3-2.1">
+            <p id="section-4.3-2.1.1">The sender creates a new unidirectional stream.<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-2.2">
+            <p id="section-4.3-2.2.1">The sender writes exactly one bundle to the stream, in one of the two
+forms described in <a href="#stream-content" class="auto internal xref">Section 4.3.2</a>.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-2.3">
+            <p id="section-4.3-2.3.1">The sender closes the stream by sending a STREAM frame with the FIN bit set.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.3-3">The receiver reads data from the stream until FIN is received, then delivers the complete bundle to the BPA.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<div id="transfer-completion">
+<section id="section-4.3.1">
+          <h4 id="name-transfer-completion">
+<a href="#section-4.3.1" class="section-number selfRef">4.3.1. </a><a href="#name-transfer-completion" class="section-name selfRef">Transfer Completion</a>
+          </h4>
+<p id="section-4.3.1-1">QUIC guarantees reliable, in-order delivery of stream data, and Qubicle
+defines no convergence-layer acknowledgment. A reliable transfer is complete
+from the sender's perspective when the QUIC endpoint reports that all stream
+data, including the FIN, has been acknowledged by the peer.<a href="#section-4.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-2">This completion signal is generated by the peer's QUIC transport
+implementation upon receipt of the data. It confirms that the data reached
+the peer's QUIC endpoint; it does not confirm that the peer's convergence
+layer has read the data, nor that the peer's BPA has accepted the bundle. In
+particular, data acknowledged by the QUIC endpoint but not yet consumed by
+the receiving application can be lost if the receiving process fails.
+Receivers <span class="bcp14">SHOULD</span> therefore read stream data promptly and pass each completed
+bundle to the BPA without unnecessary delay, so as to minimize the interval
+during which acknowledged data is held only in transport buffers.<a href="#section-4.3.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-3">Transfer completion is consequently not a sufficient basis for a sending BPA
+to conclude that a bundle has been received by the next-hop BPA. Where such
+assurance is required, it <span class="bcp14">MUST</span> be obtained by bundle-layer mechanisms, such
+as the status reports defined in <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>], <a href="https://rfc-editor.org/rfc/rfc9171#section-6.1" class="relref">Section 6.1</a></span>, rather than
+inferred from the convergence layer.<a href="#section-4.3.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-4">In terms of the convergence layer service model, Qubicle provides the
+following indications to the BPA:<a href="#section-4.3.1-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3.1-5">
+            <dt id="section-4.3.1-5.1">Transmission Success:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-5.2">
+              <p id="section-4.3.1-5.2.1">All stream data for the bundle has been acknowledged by the peer's QUIC
+endpoint, as described above.<a href="#section-4.3.1-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-4.3.1-5.3">Transmission Failure:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-5.4">
+              <p id="section-4.3.1-5.4.1">The stream was reset by either peer (<a href="#cancellation" class="auto internal xref">Section 4.6</a>), or the connection
+closed before all stream data was acknowledged.<a href="#section-4.3.1-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-4.3.1-5.5">Reception Success:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-5.6">
+              <p id="section-4.3.1-5.6.1">A complete bundle has been received (FIN received, and for the wrapped
+form, exactly the declared length) and passed to the BPA.<a href="#section-4.3.1-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-4.3.1-5.7">Reception Failure:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-5.8">
+              <p id="section-4.3.1-5.8.1">The stream was reset by either peer, or the connection closed before the
+bundle was complete; any partial data has been discarded.<a href="#section-4.3.1-5.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
+<p id="section-4.3.1-6">Qubicle does not provide intermediate progress indications; a BPA requiring
+them can observe stream-level flow control state where the QUIC
+implementation exposes it.<a href="#section-4.3.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stream-content">
+<section id="section-4.3.2">
+          <h4 id="name-stream-content">
+<a href="#section-4.3.2" class="section-number selfRef">4.3.2. </a><a href="#name-stream-content" class="section-name selfRef">Stream Content</a>
+          </h4>
+<p id="section-4.3.2-1">A stream carries exactly one bundle, in either of two forms:<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3.2-2">
+            <dt id="section-4.3.2-2.1">Direct form:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.2-2.2">
+              <p id="section-4.3.2-2.2.1">The bundle's own encoding is written to the stream without any wrapper.
+The bundle is framed by the stream boundaries: its length is known to the
+receiver only when the FIN is received.<a href="#section-4.3.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-4.3.2-2.3">Wrapped form:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.2-2.4">
+              <p id="section-4.3.2-2.4.1">The bundle's encoding is carried as the content of a single
+definite-length CBOR byte string (<span>[<a href="#RFC8949" class="cite xref">RFC8949</a>], <a href="https://rfc-editor.org/rfc/rfc8949#section-3.1" class="relref">Section 3.1</a></span>). The byte
+string head declares the bundle's exact length before any bundle data is
+read.<a href="#section-4.3.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
+<p id="section-4.3.2-3">A receiver <span class="bcp14">MUST</span> accept both forms and distinguishes them by the first octet
+of the stream:<a href="#section-4.3.2-3" class="pilcrow">¶</a></p>
+<span id="name-stream-content-dispatch"></span><div id="tab-first-octet">
+<table class="left" id="table-1">
+            <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-stream-content-dispatch" class="selfRef">Stream Content Dispatch</a>
+            </caption>
+<thead>
+              <tr>
+                <th class="text-left" rowspan="1" colspan="1">First Octet</th>
+                <th class="text-left" rowspan="1" colspan="1">Interpretation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">0x9f</td>
+                <td class="text-left" rowspan="1" colspan="1">Direct form, BPv7 bundle (CBOR indefinite-length array, <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>], <a href="https://rfc-editor.org/rfc/rfc9171#section-4.1" class="relref">Section 4.1</a></span>)</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">0x06</td>
+                <td class="text-left" rowspan="1" colspan="1">Direct form, BPv6 bundle (<span>[<a href="#RFC5050" class="cite xref">RFC5050</a>]</span> version octet)</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">0x40 - 0x5b</td>
+                <td class="text-left" rowspan="1" colspan="1">Wrapped form; the bundle version is determined by the first octet of the byte string's content as above</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">any other value</td>
+                <td class="text-left" rowspan="1" colspan="1">Protocol error</td>
+              </tr>
+            </tbody>
+          </table>
+</div>
+<p id="section-4.3.2-5">An indefinite-length byte string (first octet 0x5f) is not permitted, as it
+would not convey the bundle's length. Receipt of any first octet not listed
+above, of an indefinite-length byte string, or of a byte string whose
+content does not begin with a recognized bundle version octet, is a protocol
+error and the receiver <span class="bcp14">MUST</span> close the connection with <code>QBCL_PROTOCOL_ERROR</code>.<a href="#section-4.3.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-6">In the wrapped form, the receiver reads exactly the declared number of
+content octets and then expects FIN. Receipt of additional data after the
+declared length, or of FIN before the declared length has been received, is
+a protocol error and the receiver <span class="bcp14">MUST</span> close the connection with
+<code>QBCL_PROTOCOL_ERROR</code>. In the direct form, the entire stream content is
+delivered to the BPA as a single bundle; whether that content constitutes
+exactly one well-formed bundle is determined by the BPA, not by the
+convergence layer.<a href="#section-4.3.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-7">The two forms serve different needs. The wrapped form allows a receiver to
+learn the bundle's size from the first few octets and to reject an
+oversized bundle (<a href="#cancellation" class="auto internal xref">Section 4.6</a>) or pre-allocate storage before the bulk
+of the data arrives. The direct form allows a sender to begin transmitting a
+bundle whose total length is not yet known, for example when forwarding a
+bundle that is itself still being received on another stream (cut-through
+forwarding). A sender <span class="bcp14">SHOULD</span> use the wrapped form whenever the bundle's
+length is known in advance, which is the usual case for a bundle held in
+storage, and <span class="bcp14">MAY</span> use the direct form otherwise. A receiver <span class="bcp14">MAY</span>, as a matter
+of local policy, decline direct-form bundles by cancelling the transfer with
+<code>QBCL_LENGTH_REQUIRED</code>.<a href="#section-4.3.2-7" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-8">This framing is agnostic to the bundle version carried. Qubicle
+implementations <span class="bcp14">MUST</span> support BPv7 bundles. Support for other bundle versions,
+including BPv6, is <span class="bcp14">OPTIONAL</span>; a receiver that recognizes but does not support
+the version of an incoming bundle <span class="bcp14">SHOULD</span> cancel the transfer with
+<code>QBCL_UNSUPPORTED_BUNDLE_VERSION</code> rather than treating it as a protocol
+error.<a href="#section-4.3.2-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="bundle-flow-in-both-directions">
+<section id="section-4.3.3">
+          <h4 id="name-bundle-flow-in-both-directi">
+<a href="#section-4.3.3" class="section-number selfRef">4.3.3. </a><a href="#name-bundle-flow-in-both-directi" class="section-name selfRef">Bundle Flow in Both Directions</a>
+          </h4>
+<p id="section-4.3.3-1">Both peers can send bundles simultaneously. Each peer creates unidirectional streams to send its bundles. QUIC stream IDs inherently separate client-initiated streams (IDs 2, 6, 10...) from server-initiated streams (IDs 3, 7, 11...), ensuring no collision between the two directions of bundle flow.<a href="#section-4.3.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.3-2">Qubicle uses only unidirectional streams. Peers <span class="bcp14">SHOULD</span> set the
+<code>initial_max_streams_bidi</code> transport parameter to 0. A peer that
+nonetheless receives a bidirectional stream <span class="bcp14">MUST</span> treat this as a protocol
+error and close the connection with <code>QBCL_PROTOCOL_ERROR</code>.<a href="#section-4.3.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stream-selection-and-priority">
+<section id="section-4.3.4">
+          <h4 id="name-stream-selection-and-priori">
+<a href="#section-4.3.4" class="section-number selfRef">4.3.4. </a><a href="#name-stream-selection-and-priori" class="section-name selfRef">Stream Selection and Priority</a>
+          </h4>
+<p id="section-4.3.4-1">Senders <span class="bcp14">MAY</span> use QUIC stream priorities to expedite higher-priority bundles. The mapping of bundle priority to QUIC stream priority is an implementation matter.<a href="#section-4.3.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="flow-control">
+<section id="section-4.3.5">
+          <h4 id="name-flow-control-and-stream-lim">
+<a href="#section-4.3.5" class="section-number selfRef">4.3.5. </a><a href="#name-flow-control-and-stream-lim" class="section-name selfRef">Flow Control and Stream Limits</a>
+          </h4>
+<p id="section-4.3.5-1">Qubicle relies entirely on QUIC flow control to manage receiver resources; no
+convergence-layer mechanism is defined. A receiver controls the number of
+bundles concurrently in transfer through the <code>initial_max_streams_uni</code>
+transport parameter and subsequent <code>MAX_STREAMS</code> frames, the amount of any
+single bundle that may be in flight through <code>initial_max_stream_data_uni</code>
+and <code>MAX_STREAM_DATA</code>, and total buffered data through <code>initial_max_data</code>
+and <code>MAX_DATA</code>. A receiver that is temporarily unable to accept more data
+simply withholds credit, causing the sender to pause without error.
+Receivers <span class="bcp14">SHOULD</span> size these limits to reflect the storage they are actually
+prepared to commit to in-progress bundles; see <a href="#flow-control-sizing" class="auto internal xref">Section 7.3</a>.<a href="#section-4.3.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.5-2">QUIC stream identifiers are 62-bit values, so the total number of streams
+over a connection's lifetime is not a practical constraint. If an
+implementation nonetheless reaches an internal limit on stream creation, it
+<span class="bcp14">SHOULD</span> gracefully close the connection and establish a new one.<a href="#section-4.3.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="unreliable-transfer">
+<section id="section-4.4">
+        <h3 id="name-unreliable-bundle-transfer">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-unreliable-bundle-transfer" class="section-name selfRef">Unreliable Bundle Transfer</a>
+        </h3>
+<p id="section-4.4-1">For unreliable transfer, bundles are sent using QUIC datagrams <span>[<a href="#RFC9221" class="cite xref">RFC9221</a>]</span> with <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> framing.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-2">Support for the unreliable service is <span class="bcp14">OPTIONAL</span>. An implementation offering
+it <span class="bcp14">MUST</span> advertise the <code>max_datagram_frame_size</code> transport parameter. The
+unreliable service is available on a session only if both peers have
+advertised this parameter; otherwise neither peer sends DATAGRAM frames and
+only the reliable service is available. Implementations <span class="bcp14">SHOULD</span> make the
+availability of the unreliable service known to the BPA so that it can
+select an appropriate service for each bundle.<a href="#section-4.4-2" class="pilcrow">¶</a></p>
+<p id="section-4.4-3">Each QUIC DATAGRAM frame carries one or more <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> messages, and plays
+the role of the Link-layer PDU in the <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> model: it is delivered in
+its entirety or not at all. A sender <span class="bcp14">MUST NOT</span> construct a datagram larger
+than the peer's advertised <code>max_datagram_frame_size</code>, and <span class="bcp14">SHOULD</span> size
+datagrams to fit within the current path MTU so that they are not dropped by
+the QUIC layer. <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> segmentation, reassembly, transfer identification,
+and optional repetition apply unchanged.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+<p id="section-4.4-4">The <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> Transfer Window size (<span>[<a href="#BTP-U" class="cite xref">BTP-U</a>], <a href="https://datatracker.ietf.org/doc/html/draft-ietf-dtn-btpu-03#section-5" class="relref">Section 5</a></span>) <span class="bcp14">MUST</span> be configured
+consistently at both peers; how this is done is out of scope for this
+document.<a href="#section-4.4-4" class="pilcrow">¶</a></p>
+<p id="section-4.4-5">QUIC DATAGRAM frames are subject to QUIC congestion control
+(<span>[<a href="#RFC9221" class="cite xref">RFC9221</a>], <a href="https://rfc-editor.org/rfc/rfc9221#section-5" class="relref">Section 5</a></span>), satisfying the <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> requirement that it not
+be deployed without congestion control where congestion may occur.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
+<p id="section-4.4-6">The mapping of bundle priority to <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> transfer interleaving is an implementation matter.<a href="#section-4.4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="connection-termination">
+<section id="section-4.5">
+        <h3 id="name-connection-termination">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-connection-termination" class="section-name selfRef">Connection Termination</a>
+        </h3>
+<p id="section-4.5-1">A session ends when the QUIC connection closes, whether by an explicit
+<code>CONNECTION_CLOSE</code> from either peer or by expiry of the idle timeout
+(<a href="#keepalive" class="auto internal xref">Section 4.7</a>). Idle timeout is a normal way for a session to end, not an
+error; a peer with further bundles to send simply establishes a new session.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">A peer wishing to end a session gracefully <span class="bcp14">SHOULD</span> stop opening new streams
+and initiating new <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> transfers, allow in-progress reliable transfers
+in both directions to complete, and then close the connection with
+<code>QBCL_NO_ERROR</code>. Since QUIC provides no means to tell the remote peer that
+no further streams will be opened, a peer <span class="bcp14">SHOULD</span> bound this wait with a
+local timer.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
+<p id="section-4.5-3">A peer <span class="bcp14">MAY</span> instead close the connection immediately at any time. If it does
+so deliberately while transfers are in progress it <span class="bcp14">SHOULD</span> use
+<code>QBCL_SHUTTING_DOWN</code>; other codes in <a href="#error-codes" class="auto internal xref">Section 5</a> apply for error
+conditions.<a href="#section-4.5-3" class="pilcrow">¶</a></p>
+<p id="section-4.5-4">When a connection closes for any reason, all incomplete reliable transfers
+on it have failed. The receiver <span class="bcp14">MUST</span> discard any partially received bundle
+data, as in <a href="#cancellation" class="auto internal xref">Section 4.6</a>, and the sender's BPA is notified of each
+failure so that the affected bundles can be re-forwarded. Any incomplete
+<span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> transfers on the session are likewise lost.<a href="#section-4.5-4" class="pilcrow">¶</a></p>
+<p id="section-4.5-5">Two peers may establish connections to each other concurrently, resulting in
+more than one session between the same pair of Node IDs. This is permitted
+and is not an error. A peer <span class="bcp14">MAY</span> choose to gracefully close a redundant
+session, but <span class="bcp14">MUST</span> accept bundles received on any established session.<a href="#section-4.5-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="cancellation">
+<section id="section-4.6">
+        <h3 id="name-transfer-cancellation">
+<a href="#section-4.6" class="section-number selfRef">4.6. </a><a href="#name-transfer-cancellation" class="section-name selfRef">Transfer Cancellation</a>
+        </h3>
+<p id="section-4.6-1">Either peer may cancel an in-progress reliable transfer.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
+<p id="section-4.6-2">A sender cancels a transfer by sending <code>RESET_STREAM</code> on the bundle's stream
+with an appropriate error code (<a href="#error-codes" class="auto internal xref">Section 5</a>). A sender might do this,
+for example, when the bundle's lifetime expires before transfer completes,
+or when the BPA withdraws the bundle from this CLA.<a href="#section-4.6-2" class="pilcrow">¶</a></p>
+<p id="section-4.6-3">A receiver cancels a transfer by sending <code>STOP_SENDING</code> on the bundle's
+stream with an appropriate error code. The sender <span class="bcp14">MUST</span> respond with
+<code>RESET_STREAM</code> as required by <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-3.5" class="relref">Section 3.5</a></span>. A receiver might do
+this, for example, when the incoming bundle exceeds the receiver's storage
+or policy limits, or when the receiver's BPA is shutting down.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
+<p id="section-4.6-4">On receiving <code>RESET_STREAM</code>, a receiver <span class="bcp14">MUST</span> discard any partially received
+bundle data for that stream and <span class="bcp14">MUST NOT</span> deliver a partial bundle to the BPA.
+A receiver that has sent <code>STOP_SENDING</code> <span class="bcp14">MUST</span> likewise discard any data
+subsequently received on that stream. A cancelled transfer is reported to the
+sending BPA as a failed transfer; the bundle itself is unaffected and <span class="bcp14">MAY</span> be
+retransmitted on a new stream or via another CLA, subject to BPA policy.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
+<p id="section-4.6-5">A receiver enforcing a maximum receivable bundle size can reject a
+wrapped-form bundle (<a href="#stream-content" class="auto internal xref">Section 4.3.2</a>) as soon as the byte string head has
+been read, before any bundle data is received. A direct-form bundle can only
+be rejected once the received octet count exceeds the limit, by which time
+that much bandwidth has been consumed. Receivers for which this matters can
+additionally bound in-flight data using the <code>initial_max_stream_data_uni</code>
+transport parameter, or decline direct-form bundles altogether with
+<code>QBCL_LENGTH_REQUIRED</code>. Since a sender learns the peer's stream flow control
+limit during the handshake, a sender <span class="bcp14">SHOULD NOT</span> begin transfer of a bundle
+larger than that limit unless it has reason to expect the limit to be
+raised.<a href="#section-4.6-5" class="pilcrow">¶</a></p>
+<p id="section-4.6-6">Cancellation of unreliable transfers is governed by <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span>.<a href="#section-4.6-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="keepalive">
+<section id="section-4.7">
+        <h3 id="name-keepalive">
+<a href="#section-4.7" class="section-number selfRef">4.7. </a><a href="#name-keepalive" class="section-name selfRef">Keepalive</a>
+        </h3>
+<p id="section-4.7-1">Qubicle relies on QUIC's native idle timeout mechanism. Peers negotiate the <code>max_idle_timeout</code> transport parameter during connection establishment. See <a href="#timer-tuning" class="auto internal xref">Section 7.2</a> for guidance on selecting this and related values.<a href="#section-4.7-1" class="pilcrow">¶</a></p>
+<p id="section-4.7-2">Where a session must be kept alive across periods with no bundles to send,
+implementations <span class="bcp14">MAY</span> use QUIC PING frames (<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-10.1.2" class="relref">Section 10.1.2</a></span>)
+where the QUIC implementation exposes such a facility. Keepalives should be
+balanced against the idle timeout guidance in <a href="#timer-tuning" class="auto internal xref">Section 7.2</a>: a session
+that is deliberately allowed to time out and re-established later can be
+preferable to keeping one alive through a scheduled link outage.<a href="#section-4.7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="error-codes">
+<section id="section-5">
+      <h2 id="name-error-codes">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-error-codes" class="section-name selfRef">Error Codes</a>
+      </h2>
+<p id="section-5-1">Qubicle defines a single space of application error codes, used in the QUIC
+<code>CONNECTION_CLOSE</code> frame (with the application-level frame type, see
+<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-19.19" class="relref">Section 19.19</a></span>), <code>RESET_STREAM</code> frame, and <code>STOP_SENDING</code>
+frame. QUIC application error codes are 62-bit unsigned integers.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<span id="name-qubicle-error-codes"></span><div id="tab-error-codes">
+<table class="left" id="table-2">
+        <caption>
+<a href="#table-2" class="selfRef">Table 2</a>:
+<a href="#name-qubicle-error-codes" class="selfRef">Qubicle Error Codes</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-left" rowspan="1" colspan="1">Code</th>
+            <th class="text-left" rowspan="1" colspan="1">Name</th>
+            <th class="text-left" rowspan="1" colspan="1">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x00</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_NO_ERROR</td>
+            <td class="text-left" rowspan="1" colspan="1">Graceful connection closure, no error</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x01</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_PROTOCOL_ERROR</td>
+            <td class="text-left" rowspan="1" colspan="1">Peer violated this specification</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x02</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_TRANSFER_CANCELLED</td>
+            <td class="text-left" rowspan="1" colspan="1">Transfer aborted for a reason not otherwise specified (e.g., bundle lifetime expired, BPA withdrew the bundle)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x03</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_BUNDLE_TOO_LARGE</td>
+            <td class="text-left" rowspan="1" colspan="1">Incoming bundle exceeds the receiver's maximum receivable bundle size</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x04</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_STORAGE_EXHAUSTED</td>
+            <td class="text-left" rowspan="1" colspan="1">Receiver temporarily cannot accept bundles; the sender <span class="bcp14">MAY</span> retry later</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x05</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_SHUTTING_DOWN</td>
+            <td class="text-left" rowspan="1" colspan="1">Peer is deliberately closing the session; no fault is implied</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x06</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_LENGTH_REQUIRED</td>
+            <td class="text-left" rowspan="1" colspan="1">Receiver policy does not accept direct-form bundles (<a href="#stream-content" class="auto internal xref">Section 4.3.2</a>)</td>
+          </tr>
+          <tr>
+            <td class="text-left" rowspan="1" colspan="1">0x07</td>
+            <td class="text-left" rowspan="1" colspan="1">QBCL_UNSUPPORTED_BUNDLE_VERSION</td>
+            <td class="text-left" rowspan="1" colspan="1">Receiver does not support the version of the bundle being transferred</td>
+          </tr>
+        </tbody>
+      </table>
+</div>
+<p id="section-5-3"><code>QBCL_NO_ERROR</code> is only meaningful on <code>CONNECTION_CLOSE</code>. A cancelled
+transfer always has a cause, so peers <span class="bcp14">MUST NOT</span> use <code>QBCL_NO_ERROR</code> in
+<code>RESET_STREAM</code> or <code>STOP_SENDING</code>; a peer receiving it there <span class="bcp14">SHOULD</span> treat it
+as <code>QBCL_TRANSFER_CANCELLED</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">When a peer closes the session deliberately while transfers are still in
+progress, it <span class="bcp14">SHOULD</span> use <code>QBCL_SHUTTING_DOWN</code> on <code>CONNECTION_CLOSE</code> rather
+than <code>QBCL_NO_ERROR</code>, so that the remote peer can distinguish an orderly
+shutdown with collateral transfer failures from an idle close.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">A peer receiving an unrecognized error code <span class="bcp14">MUST</span> treat it as
+<code>QBCL_PROTOCOL_ERROR</code> on <code>CONNECTION_CLOSE</code> and as <code>QBCL_TRANSFER_CANCELLED</code>
+on <code>RESET_STREAM</code> or <code>STOP_SENDING</code>.<a href="#section-5-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-6">
+      <h2 id="name-security-considerations">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<div id="transport-security">
+<section id="section-6.1">
+        <h3 id="name-transport-security">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-transport-security" class="section-name selfRef">Transport Security</a>
+        </h3>
+<p id="section-6.1-1">QUIC mandates TLS 1.3 for all connections, providing confidentiality, integrity, and authentication. Qubicle inherits these security properties.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">As specified in <a href="#peer-node-id" class="auto internal xref">Section 4.2</a>, Qubicle requires mutual certificate
+authentication: both client and server present certificates, and each peer
+validates the other's certificate before exchanging bundles. Certificate
+validation, including the <code>BundleEID</code> OtherName checks and the applicable
+certificate profile, <span class="bcp14">SHOULD</span> follow <span>[<a href="#RFC9174" class="cite xref">RFC9174</a>], <a href="https://rfc-editor.org/rfc/rfc9174#section-4.4" class="relref">Section 4.4</a></span>. Automated
+certificate provisioning is available via the ACME extensions defined in
+<span>[<a href="#RFC9891" class="cite xref">RFC9891</a>]</span>.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="bundle-security">
+<section id="section-6.2">
+        <h3 id="name-bundle-security">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-bundle-security" class="section-name selfRef">Bundle Security</a>
+        </h3>
+<p id="section-6.2-1">Transport security protects bundles in transit between adjacent nodes. For end-to-end bundle security, implementations <span class="bcp14">SHOULD</span> use BPSec <span>[<a href="#RFC9172" class="cite xref">RFC9172</a>]</span>.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="denial-of-service">
+<section id="section-6.3">
+        <h3 id="name-denial-of-service">
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-denial-of-service" class="section-name selfRef">Denial of Service</a>
+        </h3>
+<p id="section-6.3-1">QUIC provides built-in protection against many denial-of-service attacks, including address validation and amplification prevention.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
+<p id="section-6.3-2">QUIC flow control (<a href="#flow-control" class="auto internal xref">Section 4.3.5</a>) is the primary means of bounding the
+resources a peer can consume; receivers <span class="bcp14">SHOULD</span> configure it accordingly
+rather than accepting unbounded data and discarding it afterwards.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="zero-rtt">
+<section id="section-6.4">
+        <h3 id="name-0-rtt-considerations">
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-0-rtt-considerations" class="section-name selfRef">0-RTT Considerations</a>
+        </h3>
+<p id="section-6.4-1">QUIC 0-RTT data is not protected against replay. Because a replayed bundle
+transfer could cause a bundle to be received and forwarded more than once,
+implementations <span class="bcp14">SHOULD NOT</span> send bundles as 0-RTT data, and servers <span class="bcp14">MAY</span>
+decline to accept 0-RTT altogether.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2">0-RTT resumption could nonetheless materially reduce session establishment
+cost on long-delay paths between peers that reconnect frequently. The
+consequence of a replayed transfer is duplicate receipt of a bundle, which a
+BPA can detect from the combination of source node ID and creation timestamp
+(<span>[<a href="#RFC9171" class="cite xref">RFC9171</a>], <a href="https://rfc-editor.org/rfc/rfc9171#section-4.2.7" class="relref">Section 4.2.7</a></span>) together with any fragment offset, except for
+anonymous bundles, and whose impact is bounded where BPSec (<span>[<a href="#RFC9172" class="cite xref">RFC9172</a>]</span>)
+protects the bundle. Whether this risk is acceptable in a given environment
+is a matter for operational experience and for any QUIC profile applicable
+to that environment (<a href="#applicability" class="auto internal xref">Section 3</a>); a deployment that does permit 0-RTT
+<span class="bcp14">SHOULD</span> ensure that its BPAs perform duplicate bundle detection.<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="operational-considerations">
+<section id="section-7">
+      <h2 id="name-operational-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-operational-considerations" class="section-name selfRef">Operational Considerations</a>
+      </h2>
+<div id="version-negotiation">
+<section id="section-7.1">
+        <h3 id="name-version-negotiation">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-version-negotiation" class="section-name selfRef">Version Negotiation</a>
+        </h3>
+<p id="section-7.1-1">To resist ossification, Qubicle endpoints are <span class="bcp14">RECOMMENDED</span> to support QUIC
+version 2 <span>[<a href="#RFC9369" class="cite xref">RFC9369</a>]</span> and compatible version negotiation <span>[<a href="#RFC9368" class="cite xref">RFC9368</a>]</span>.
+Qubicle operates identically over any QUIC version providing the features
+used in this document.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="timer-tuning">
+<section id="section-7.2">
+        <h3 id="name-timer-and-transport-paramet">
+<a href="#section-7.2" class="section-number selfRef">7.2. </a><a href="#name-timer-and-transport-paramet" class="section-name selfRef">Timer and Transport Parameter Tuning</a>
+        </h3>
+<p id="section-7.2-1">QUIC connection behavior is governed by a number of timers. Some are
+negotiated via transport parameters during the handshake (e.g.,
+<code>max_idle_timeout</code> and <code>max_ack_delay</code>), while others are derived locally
+from measured path characteristics (e.g., the Probe Timeout (PTO) computed
+from RTT estimates per <span>[<a href="#RFC9002" class="cite xref">RFC9002</a>]</span>, seeded by an implementation's initial
+RTT value).<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+<p id="section-7.2-2">In many deployments, particularly those on the terrestrial Internet, the
+default values recommended by <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>]</span> and <span>[<a href="#RFC9002" class="cite xref">RFC9002</a>]</span> and used by
+general-purpose QUIC implementations are expected to be adequate, and
+Qubicle implementations <span class="bcp14">MAY</span> use them unchanged.<a href="#section-7.2-2" class="pilcrow">¶</a></p>
+<p id="section-7.2-3">However, Qubicle peers may possess knowledge of end-to-end path
+characteristics that is unavailable to the QUIC transport itself, for
+example from contact plans, orbital mechanics, or link scheduling
+information in non-terrestrial deployments. Such information may indicate
+expected propagation delays, predictable link outages, or highly asymmetric
+paths for which Internet defaults are inappropriate (e.g., an idle timeout
+short enough to be tripped by a scheduled link gap, or an initial RTT small
+enough to cause spurious PTO retransmissions during the handshake).
+Implementations <span class="bcp14">SHOULD</span> allow these timers and transport parameters to be
+configured on a per-peer basis so that they can be adjusted using such
+knowledge. The means by which such path knowledge is obtained, and the
+specific adjustments derived from it, are out of scope for this document and
+may be the subject of environment-specific QUIC profiles.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="flow-control-sizing">
+<section id="section-7.3">
+        <h3 id="name-flow-control-sizing">
+<a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-flow-control-sizing" class="section-name selfRef">Flow Control Sizing</a>
+        </h3>
+<p id="section-7.3-1">The QUIC flow control limits described in <a href="#flow-control" class="auto internal xref">Section 4.3.5</a> interact.
+Because a sender must wait for stream credit before opening a stream, a
+receiver that grants very few concurrent streams limits sender parallelism;
+conversely, a receiver that grants many streams but little per-stream data
+can find a large bundle stalling behind many small ones. Per-stream and
+connection-level data limits also bound throughput to roughly the limit
+divided by the path RTT, so limits sized purely for storage protection may
+underutilize a high-bandwidth, high-delay path. The appropriate balance
+between storage commitment, parallelism, and throughput is
+deployment-specific, and the same out-of-scope path knowledge discussed in
+<a href="#timer-tuning" class="auto internal xref">Section 7.2</a> can inform it.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="convergence-layer-fallback">
+<section id="section-7.4">
+        <h3 id="name-convergence-layer-fallback">
+<a href="#section-7.4" class="section-number selfRef">7.4. </a><a href="#name-convergence-layer-fallback" class="section-name selfRef">Convergence Layer Fallback</a>
+        </h3>
+<p id="section-7.4-1">As noted in <span>[<a href="#RFC9308" class="cite xref">RFC9308</a>]</span>, some networks block UDP traffic such that
+Qubicle connections cannot be established. Bundle Protocol Agents that
+employ Qubicle are <span class="bcp14">RECOMMENDED</span> to support additional Convergence Layers,
+e.g. TCPCLv4 <span>[<a href="#RFC9174" class="cite xref">RFC9174</a>]</span>.<a href="#section-7.4-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="coexistence-with-other-udp-based-convergence-layers">
+<section id="section-7.5">
+        <h3 id="name-coexistence-with-other-udp-">
+<a href="#section-7.5" class="section-number selfRef">7.5. </a><a href="#name-coexistence-with-other-udp-" class="section-name selfRef">Coexistence With Other UDP-based Convergence Layers</a>
+        </h3>
+<p id="section-7.5-1">It is <span class="bcp14">RECOMMENDED</span> that Qubicle implementations use a dedicated UDP port for
+operational simplicity.<a href="#section-7.5-1" class="pilcrow">¶</a></p>
+<p id="section-7.5-2">Bundle Protocol Agents that employ Qubicle and other UDP-based Convergence
+Layers on the same UDP port <span class="bcp14">MUST</span> be able to disambiguate received datagrams
+in order to route them to the correct CLA. For UDP CLs that use DTLS,
+<span>[<a href="#RFC9443" class="cite xref">RFC9443</a>]</span> provides the required guidance to disambiguate QUIC traffic
+from DTLS-encapsulated CL traffic.<a href="#section-7.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="dns-example">
+<section id="section-7.6">
+        <h3 id="name-finding-a-qubicle-endpoint-">
+<a href="#section-7.6" class="section-number selfRef">7.6. </a><a href="#name-finding-a-qubicle-endpoint-" class="section-name selfRef">Finding a Qubicle Endpoint Via DNS</a>
+        </h3>
+<p id="section-7.6-1">Qubicle senders may be manually provisioned with a hostname
+(or IP addresses) and UDP port corresponding to the listening Qubicle
+endpoint for a peer Bundle Protocol Agent.
+If only a hostname is known but a port is not, <span>[<a href="#RFC9460" class="cite xref">RFC9460</a>]</span> SVCB
+Resource Records may be looked up to find a listening
+UDP port and confirm expected ALPN configuration.<a href="#section-7.6-1" class="pilcrow">¶</a></p>
+<p id="section-7.6-2">Consider this zone file for <code>example.</code>:<a href="#section-7.6-2" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-7.6-3">
+<pre>
+;; zone: example.
+;
+$ORIGIN example.
+_dtn-bundle._tcp.mars-orbiter IN SRV 10 20 4556 cloud-agent.example.
+_qbcl.mars-orbiter IN SVCB 0 cloud-agent.example.
+
+cloud-agent IN A    192.0.2.1
+cloud-agent IN AAAA 2001:db8::1
+cloud-agent IN SVCB 10 . (
+    ipv4hint=192.0.2.1
+    ipv6hint=2001:db8::1
+    port=1234 alpn="qbcl")
+</pre><a href="#section-7.6-3" class="pilcrow">¶</a>
+</div>
+<p id="section-7.6-4">A BPA supporting both TCPCLv4 <span>[<a href="#RFC9174" class="cite xref">RFC9174</a>]</span> and Qubicle may attempt to
+resolve an SRV record for the <code>_dtn-bundle._tcp</code> prefixed hostname. A BPA
+that supports Qubicle
+might also issue DNS SVCB queries for the <span>[<a href="#AttrLeaf" class="cite xref">AttrLeaf</a>]</span> prefix "_qbcl". The
+sample above indicates that <code>mars-orbiter.example.</code> has an SVCB record in
+<code>AliasMode</code> referring to <code>cloud-agent.example.</code>  The SVCB record associated
+with <code>cloud-agent.example.</code> contains all required QUIC transport rendezvous
+information.<a href="#section-7.6-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-8">
+      <h2 id="name-iana-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="alpn-identifier">
+<section id="section-8.1">
+        <h3 id="name-alpn-identifier">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-alpn-identifier" class="section-name selfRef">ALPN Identifier</a>
+        </h3>
+<p id="section-8.1-1">IANA is requested to register the following ALPN identifier in the "TLS Application-Layer Protocol Negotiation (ALPN) Protocol IDs" registry:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<span id="name-alpn-registration"></span><div id="tab-alpn">
+<table class="left" id="table-3">
+          <caption>
+<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#name-alpn-registration" class="selfRef">ALPN Registration</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Protocol</th>
+              <th class="text-left" rowspan="1" colspan="1">Identification Sequence</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Qubicle</td>
+              <td class="text-left" rowspan="1" colspan="1">0x71 0x62 0x63 0x6C ("qbcl")</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+</section>
+</div>
+<div id="attrleaf-node-name">
+<section id="section-8.2">
+        <h3 id="name-attrleaf-node-name">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-attrleaf-node-name" class="section-name selfRef">AttrLeaf Node Name</a>
+        </h3>
+<p id="section-8.2-1">Per <span>[<a href="#AttrLeaf" class="cite xref">AttrLeaf</a>]</span>, IANA is requested to add the following entry to the DNS
+"Underscored and Globally Scoped DNS Node Names" registry:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<span id="name-attrleaf-registration"></span><div id="tab-attrleaf">
+<table class="left" id="table-4">
+          <caption>
+<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#name-attrleaf-registration" class="selfRef">AttrLeaf Registration</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">RR Type</th>
+              <th class="text-left" rowspan="1" colspan="1">_NODE NAME</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">SVCB</td>
+              <td class="text-left" rowspan="1" colspan="1">_qbcl</td>
+              <td class="text-left" rowspan="1" colspan="1">this document</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+</section>
+</div>
+<div id="application-error-codes">
+<section id="section-8.3">
+        <h3 id="name-application-error-codes">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-application-error-codes" class="section-name selfRef">Application Error Codes</a>
+        </h3>
+<p id="section-8.3-1">IANA is requested to create a new registry "Qubicle Error Codes".
+Values in this registry are 62-bit unsigned integers, matching the range of
+QUIC application error codes. Each entry consists of a Code, a Name, a brief
+Description, and a Reference.<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+<p id="section-8.3-2">The registration policy for this registry is Specification Required
+<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> for codes in the range 0x00 to 0x3FFFFFFF. Codes in the
+range 0x40000000 to 0x3FFFFFFFFFFFFFFF are reserved for Private Use
+<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span> and are not assigned by IANA.<a href="#section-8.3-2" class="pilcrow">¶</a></p>
+<p id="section-8.3-3">The initial contents of the registry are:<a href="#section-8.3-3" class="pilcrow">¶</a></p>
+<span id="name-error-code-registry"></span><div id="tab-error-registry">
+<table class="left" id="table-5">
+          <caption>
+<a href="#table-5" class="selfRef">Table 5</a>:
+<a href="#name-error-code-registry" class="selfRef">Error Code Registry</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Code</th>
+              <th class="text-left" rowspan="1" colspan="1">Name</th>
+              <th class="text-left" rowspan="1" colspan="1">Description</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x00</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_NO_ERROR</td>
+              <td class="text-left" rowspan="1" colspan="1">Graceful connection closure, no error</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x01</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_PROTOCOL_ERROR</td>
+              <td class="text-left" rowspan="1" colspan="1">Peer violated this specification</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x02</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_TRANSFER_CANCELLED</td>
+              <td class="text-left" rowspan="1" colspan="1">Transfer aborted, unspecified reason</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x03</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_BUNDLE_TOO_LARGE</td>
+              <td class="text-left" rowspan="1" colspan="1">Bundle exceeds receiver's maximum size</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x04</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_STORAGE_EXHAUSTED</td>
+              <td class="text-left" rowspan="1" colspan="1">Receiver temporarily cannot accept bundles</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x05</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_SHUTTING_DOWN</td>
+              <td class="text-left" rowspan="1" colspan="1">Peer is deliberately closing the session</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x06</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_LENGTH_REQUIRED</td>
+              <td class="text-left" rowspan="1" colspan="1">Receiver does not accept direct-form bundles</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x07</td>
+              <td class="text-left" rowspan="1" colspan="1">QBCL_UNSUPPORTED_BUNDLE_VERSION</td>
+              <td class="text-left" rowspan="1" colspan="1">Receiver does not support the bundle version</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x08-0x3FFFFFFF</td>
+              <td class="text-left" rowspan="1" colspan="1">Unassigned</td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">0x40000000-0x3FFFFFFFFFFFFFFF</td>
+              <td class="text-left" rowspan="1" colspan="1">Reserved for Private Use</td>
+              <td class="text-left" rowspan="1" colspan="1"> </td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-9">
+      <h2 id="name-references">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-9.1">
+        <h3 id="name-normative-references">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="AttrLeaf">[AttrLeaf]</dt>
+        <dd>
+<span class="refAuthor">Crocker, D.</span>, <span class="refTitle">"Scoped Interpretation of DNS Resource Records through "Underscored" Naming of Attribute Leaves"</span>, <span class="seriesInfo">BCP 222</span>, <span class="seriesInfo">RFC 8552</span>, <span class="seriesInfo">DOI 10.17487/RFC8552</span>, <time datetime="2019-03" class="refDate">March 2019</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8552">https://www.rfc-editor.org/rfc/rfc8552</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="BTP-U">[BTP-U]</dt>
+        <dd>
+<span class="refAuthor">Taylor, R.</span>, <span class="refTitle">"Bundle Transfer Protocol - Unidirectional"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-dtn-btpu-03</span>, <time datetime="2026-07-19" class="refDate">19 July 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-dtn-btpu-03">https://datatracker.ietf.org/doc/html/draft-ietf-dtn-btpu-03</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8126">[RFC8126]</dt>
+        <dd>
+<span class="refAuthor">Cotton, M.</span>, <span class="refAuthor">Leiba, B.</span>, and <span class="refAuthor">T. Narten</span>, <span class="refTitle">"Guidelines for Writing an IANA Considerations Section in RFCs"</span>, <span class="seriesInfo">BCP 26</span>, <span class="seriesInfo">RFC 8126</span>, <span class="seriesInfo">DOI 10.17487/RFC8126</span>, <time datetime="2017-06" class="refDate">June 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8126">https://www.rfc-editor.org/rfc/rfc8126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+        <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8949">[RFC8949]</dt>
+        <dd>
+<span class="refAuthor">Bormann, C.</span> and <span class="refAuthor">P. Hoffman</span>, <span class="refTitle">"Concise Binary Object Representation (CBOR)"</span>, <span class="seriesInfo">STD 94</span>, <span class="seriesInfo">RFC 8949</span>, <span class="seriesInfo">DOI 10.17487/RFC8949</span>, <time datetime="2020-12" class="refDate">December 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8949">https://www.rfc-editor.org/rfc/rfc8949</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9000">[RFC9000]</dt>
+        <dd>
+<span class="refAuthor">Iyengar, J., Ed.</span> and <span class="refAuthor">M. Thomson, Ed.</span>, <span class="refTitle">"QUIC: A UDP-Based Multiplexed and Secure Transport"</span>, <span class="seriesInfo">RFC 9000</span>, <span class="seriesInfo">DOI 10.17487/RFC9000</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9000">https://www.rfc-editor.org/rfc/rfc9000</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9001">[RFC9001]</dt>
+        <dd>
+<span class="refAuthor">Thomson, M., Ed.</span> and <span class="refAuthor">S. Turner, Ed.</span>, <span class="refTitle">"Using TLS to Secure QUIC"</span>, <span class="seriesInfo">RFC 9001</span>, <span class="seriesInfo">DOI 10.17487/RFC9001</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9001">https://www.rfc-editor.org/rfc/rfc9001</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9002">[RFC9002]</dt>
+        <dd>
+<span class="refAuthor">Iyengar, J., Ed.</span> and <span class="refAuthor">I. Swett, Ed.</span>, <span class="refTitle">"QUIC Loss Detection and Congestion Control"</span>, <span class="seriesInfo">RFC 9002</span>, <span class="seriesInfo">DOI 10.17487/RFC9002</span>, <time datetime="2021-05" class="refDate">May 2021</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9002">https://www.rfc-editor.org/rfc/rfc9002</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9171">[RFC9171]</dt>
+        <dd>
+<span class="refAuthor">Burleigh, S.</span>, <span class="refAuthor">Fall, K.</span>, and <span class="refAuthor">E. Birrane, III</span>, <span class="refTitle">"Bundle Protocol Version 7"</span>, <span class="seriesInfo">RFC 9171</span>, <span class="seriesInfo">DOI 10.17487/RFC9171</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9171">https://www.rfc-editor.org/rfc/rfc9171</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9172">[RFC9172]</dt>
+        <dd>
+<span class="refAuthor">Birrane, III, E.</span> and <span class="refAuthor">K. McKeever</span>, <span class="refTitle">"Bundle Protocol Security (BPSec)"</span>, <span class="seriesInfo">RFC 9172</span>, <span class="seriesInfo">DOI 10.17487/RFC9172</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9172">https://www.rfc-editor.org/rfc/rfc9172</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9174">[RFC9174]</dt>
+        <dd>
+<span class="refAuthor">Sipos, B.</span>, <span class="refAuthor">Demmer, M.</span>, <span class="refAuthor">Ott, J.</span>, and <span class="refAuthor">S. Perreault</span>, <span class="refTitle">"Delay-Tolerant Networking TCP Convergence-Layer Protocol Version 4"</span>, <span class="seriesInfo">RFC 9174</span>, <span class="seriesInfo">DOI 10.17487/RFC9174</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9174">https://www.rfc-editor.org/rfc/rfc9174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9221">[RFC9221]</dt>
+        <dd>
+<span class="refAuthor">Pauly, T.</span>, <span class="refAuthor">Kinnear, E.</span>, and <span class="refAuthor">D. Schinazi</span>, <span class="refTitle">"An Unreliable Datagram Extension to QUIC"</span>, <span class="seriesInfo">RFC 9221</span>, <span class="seriesInfo">DOI 10.17487/RFC9221</span>, <time datetime="2022-03" class="refDate">March 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9221">https://www.rfc-editor.org/rfc/rfc9221</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9368">[RFC9368]</dt>
+        <dd>
+<span class="refAuthor">Schinazi, D.</span> and <span class="refAuthor">E. Rescorla</span>, <span class="refTitle">"Compatible Version Negotiation for QUIC"</span>, <span class="seriesInfo">RFC 9368</span>, <span class="seriesInfo">DOI 10.17487/RFC9368</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9368">https://www.rfc-editor.org/rfc/rfc9368</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9369">[RFC9369]</dt>
+        <dd>
+<span class="refAuthor">Duke, M.</span>, <span class="refTitle">"QUIC Version 2"</span>, <span class="seriesInfo">RFC 9369</span>, <span class="seriesInfo">DOI 10.17487/RFC9369</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9369">https://www.rfc-editor.org/rfc/rfc9369</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9443">[RFC9443]</dt>
+        <dd>
+<span class="refAuthor">Aboba, B.</span>, <span class="refAuthor">Salgueiro, G.</span>, and <span class="refAuthor">C. Perkins</span>, <span class="refTitle">"Multiplexing Scheme Updates for QUIC"</span>, <span class="seriesInfo">RFC 9443</span>, <span class="seriesInfo">DOI 10.17487/RFC9443</span>, <time datetime="2023-07" class="refDate">July 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9443">https://www.rfc-editor.org/rfc/rfc9443</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9460">[RFC9460]</dt>
+      <dd>
+<span class="refAuthor">Schwartz, B.</span>, <span class="refAuthor">Bishop, M.</span>, and <span class="refAuthor">E. Nygren</span>, <span class="refTitle">"Service Binding and Parameter Specification via the DNS (SVCB and HTTPS Resource Records)"</span>, <span class="seriesInfo">RFC 9460</span>, <span class="seriesInfo">DOI 10.17487/RFC9460</span>, <time datetime="2023-11" class="refDate">November 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9460">https://www.rfc-editor.org/rfc/rfc9460</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-9.2">
+        <h3 id="name-informative-references">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC5050">[RFC5050]</dt>
+        <dd>
+<span class="refAuthor">Scott, K.</span> and <span class="refAuthor">S. Burleigh</span>, <span class="refTitle">"Bundle Protocol Specification"</span>, <span class="seriesInfo">RFC 5050</span>, <span class="seriesInfo">DOI 10.17487/RFC5050</span>, <time datetime="2007-11" class="refDate">November 2007</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5050">https://www.rfc-editor.org/rfc/rfc5050</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5326">[RFC5326]</dt>
+        <dd>
+<span class="refAuthor">Ramadas, M.</span>, <span class="refAuthor">Burleigh, S.</span>, and <span class="refAuthor">S. Farrell</span>, <span class="refTitle">"Licklider Transmission Protocol - Specification"</span>, <span class="seriesInfo">RFC 5326</span>, <span class="seriesInfo">DOI 10.17487/RFC5326</span>, <time datetime="2008-09" class="refDate">September 2008</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5326">https://www.rfc-editor.org/rfc/rfc5326</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9308">[RFC9308]</dt>
+        <dd>
+<span class="refAuthor">Kühlewind, M.</span> and <span class="refAuthor">B. Trammell</span>, <span class="refTitle">"Applicability of the QUIC Transport Protocol"</span>, <span class="seriesInfo">RFC 9308</span>, <span class="seriesInfo">DOI 10.17487/RFC9308</span>, <time datetime="2022-09" class="refDate">September 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9308">https://www.rfc-editor.org/rfc/rfc9308</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9891">[RFC9891]</dt>
+      <dd>
+<span class="refAuthor">Sipos, B.</span>, <span class="refTitle">"Automated Certificate Management Environment (ACME) Delay-Tolerant Networking (DTN) Node ID Validation Extension"</span>, <span class="seriesInfo">RFC 9891</span>, <span class="seriesInfo">DOI 10.17487/RFC9891</span>, <time datetime="2025-11" class="refDate">November 2025</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9891">https://www.rfc-editor.org/rfc/rfc9891</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-A">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Rick Taylor</span></div>
+<div dir="auto" class="left"><span class="org">Aalyria Technologies</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:rtaylor@aalyria.com" class="email">rtaylor@aalyria.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Erik Kline</span></div>
+<div dir="auto" class="left"><span class="org">Aalyria Technologies</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:ek.ietf@gmail.com" class="email">ek.ietf@gmail.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
