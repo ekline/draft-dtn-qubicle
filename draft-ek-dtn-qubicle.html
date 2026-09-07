@@ -1172,16 +1172,19 @@ svg {
                 <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-reliable-bundle-transfer" class="internal xref">Reliable Bundle Transfer</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.1">
-                    <p id="section-toc.1-1.4.2.3.2.1.1"><a href="#section-4.3.1" class="auto internal xref">4.3.1</a>.  <a href="#name-stream-content" class="internal xref">Stream Content</a></p>
+                    <p id="section-toc.1-1.4.2.3.2.1.1"><a href="#section-4.3.1" class="auto internal xref">4.3.1</a>.  <a href="#name-transfer-completion" class="internal xref">Transfer Completion</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.2">
-                    <p id="section-toc.1-1.4.2.3.2.2.1"><a href="#section-4.3.2" class="auto internal xref">4.3.2</a>.  <a href="#name-bundle-flow-in-both-directi" class="internal xref">Bundle Flow in Both Directions</a></p>
+                    <p id="section-toc.1-1.4.2.3.2.2.1"><a href="#section-4.3.2" class="auto internal xref">4.3.2</a>.  <a href="#name-stream-content" class="internal xref">Stream Content</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.3">
-                    <p id="section-toc.1-1.4.2.3.2.3.1"><a href="#section-4.3.3" class="auto internal xref">4.3.3</a>.  <a href="#name-stream-selection-and-priori" class="internal xref">Stream Selection and Priority</a></p>
+                    <p id="section-toc.1-1.4.2.3.2.3.1"><a href="#section-4.3.3" class="auto internal xref">4.3.3</a>.  <a href="#name-bundle-flow-in-both-directi" class="internal xref">Bundle Flow in Both Directions</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.4">
-                    <p id="section-toc.1-1.4.2.3.2.4.1"><a href="#section-4.3.4" class="auto internal xref">4.3.4</a>.  <a href="#name-flow-control-and-stream-lim" class="internal xref">Flow Control and Stream Limits</a></p>
+                    <p id="section-toc.1-1.4.2.3.2.4.1"><a href="#section-4.3.4" class="auto internal xref">4.3.4</a>.  <a href="#name-stream-selection-and-priori" class="internal xref">Stream Selection and Priority</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3.2.5">
+                    <p id="section-toc.1-1.4.2.3.2.5.1"><a href="#section-4.3.5" class="auto internal xref">4.3.5</a>.  <a href="#name-flow-control-and-stream-lim" class="internal xref">Flow Control and Stream Limits</a></p>
 </li>
                 </ul>
 </li>
@@ -1432,44 +1435,94 @@ reached.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.3-2.2">
             <p id="section-4.3-2.2.1">The sender writes exactly one bundle to the stream, in one of the two
-forms described in <a href="#stream-content" class="auto internal xref">Section 4.3.1</a>.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+forms described in <a href="#stream-content" class="auto internal xref">Section 4.3.2</a>.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.3-2.3">
             <p id="section-4.3-2.3.1">The sender closes the stream by sending a STREAM frame with the FIN bit set.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-4.3-3">The receiver reads data from the stream until FIN is received, then delivers the complete bundle to the BPA.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
-<p id="section-4.3-4">QUIC guarantees reliable, in-order delivery of stream data. No application-layer acknowledgment is required; the sender can consider the transfer complete when QUIC confirms the stream data has been acknowledged by the peer.
-Completed transfer at the convergence layer does not guarantee successful
-receipt at the receiving Bundle Protocol Agent, so this signal alone does
-not suffice to indicate when a Bundle can be deleted from the sender.
-Additional information at the Bundle Protocol layer is required to confirm
-successful transfer.<a href="#section-4.3-4" class="pilcrow">¶</a></p>
-<div id="stream-content">
+<div id="transfer-completion">
 <section id="section-4.3.1">
-          <h4 id="name-stream-content">
-<a href="#section-4.3.1" class="section-number selfRef">4.3.1. </a><a href="#name-stream-content" class="section-name selfRef">Stream Content</a>
+          <h4 id="name-transfer-completion">
+<a href="#section-4.3.1" class="section-number selfRef">4.3.1. </a><a href="#name-transfer-completion" class="section-name selfRef">Transfer Completion</a>
           </h4>
-<p id="section-4.3.1-1">A stream carries exactly one bundle, in either of two forms:<a href="#section-4.3.1-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4.3.1-2">
-            <dt id="section-4.3.1-2.1">Direct form:</dt>
-            <dd style="margin-left: 1.5em" id="section-4.3.1-2.2">
-              <p id="section-4.3.1-2.2.1">The bundle's own encoding is written to the stream without any wrapper.
-The bundle is framed by the stream boundaries: its length is known to the
-receiver only when the FIN is received.<a href="#section-4.3.1-2.2.1" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-1">QUIC guarantees reliable, in-order delivery of stream data, and Qubicle
+defines no convergence-layer acknowledgment. A reliable transfer is complete
+from the sender's perspective when the QUIC endpoint reports that all stream
+data, including the FIN, has been acknowledged by the peer.<a href="#section-4.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-2">This completion signal is generated by the peer's QUIC transport
+implementation upon receipt of the data. It confirms that the data reached
+the peer's QUIC endpoint; it does not confirm that the peer's convergence
+layer has read the data, nor that the peer's BPA has accepted the bundle. In
+particular, data acknowledged by the QUIC endpoint but not yet consumed by
+the receiving application can be lost if the receiving process fails.
+Receivers <span class="bcp14">SHOULD</span> therefore read stream data promptly and pass each completed
+bundle to the BPA without unnecessary delay, so as to minimize the interval
+during which acknowledged data is held only in transport buffers.<a href="#section-4.3.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-3">Transfer completion is consequently not a sufficient basis for a sending BPA
+to conclude that a bundle has been received by the next-hop BPA. Where such
+assurance is required, it <span class="bcp14">MUST</span> be obtained by bundle-layer mechanisms, such
+as the status reports defined in <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>], <a href="https://rfc-editor.org/rfc/rfc9171#section-6.1" class="relref">Section 6.1</a></span>, rather than
+inferred from the convergence layer.<a href="#section-4.3.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-4">In terms of the convergence layer service model, Qubicle provides the
+following indications to the BPA:<a href="#section-4.3.1-4" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3.1-5">
+            <dt id="section-4.3.1-5.1">Transmission Success:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-5.2">
+              <p id="section-4.3.1-5.2.1">All stream data for the bundle has been acknowledged by the peer's QUIC
+endpoint, as described above.<a href="#section-4.3.1-5.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-4.3.1-2.3">Wrapped form:</dt>
-            <dd style="margin-left: 1.5em" id="section-4.3.1-2.4">
-              <p id="section-4.3.1-2.4.1">The bundle's encoding is carried as the content of a single
-definite-length CBOR byte string (<span>[<a href="#RFC8949" class="cite xref">RFC8949</a>], <a href="https://rfc-editor.org/rfc/rfc8949#section-3.1" class="relref">Section 3.1</a></span>). The byte
-string head declares the bundle's exact length before any bundle data is
-read.<a href="#section-4.3.1-2.4.1" class="pilcrow">¶</a></p>
+<dt id="section-4.3.1-5.3">Transmission Failure:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-5.4">
+              <p id="section-4.3.1-5.4.1">The stream was reset by either peer (<a href="#cancellation" class="auto internal xref">Section 4.6</a>), or the connection
+closed before all stream data was acknowledged.<a href="#section-4.3.1-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-4.3.1-5.5">Reception Success:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-5.6">
+              <p id="section-4.3.1-5.6.1">A complete bundle has been received (FIN received, and for the wrapped
+form, exactly the declared length) and passed to the BPA.<a href="#section-4.3.1-5.6.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-4.3.1-5.7">Reception Failure:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-5.8">
+              <p id="section-4.3.1-5.8.1">The stream was reset by either peer, or the connection closed before the
+bundle was complete; any partial data has been discarded.<a href="#section-4.3.1-5.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
-<p id="section-4.3.1-3">A receiver <span class="bcp14">MUST</span> accept both forms and distinguishes them by the first octet
-of the stream:<a href="#section-4.3.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-6">Qubicle does not provide intermediate progress indications; a BPA requiring
+them can observe stream-level flow control state where the QUIC
+implementation exposes it.<a href="#section-4.3.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="stream-content">
+<section id="section-4.3.2">
+          <h4 id="name-stream-content">
+<a href="#section-4.3.2" class="section-number selfRef">4.3.2. </a><a href="#name-stream-content" class="section-name selfRef">Stream Content</a>
+          </h4>
+<p id="section-4.3.2-1">A stream carries exactly one bundle, in either of two forms:<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3.2-2">
+            <dt id="section-4.3.2-2.1">Direct form:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.2-2.2">
+              <p id="section-4.3.2-2.2.1">The bundle's own encoding is written to the stream without any wrapper.
+The bundle is framed by the stream boundaries: its length is known to the
+receiver only when the FIN is received.<a href="#section-4.3.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-4.3.2-2.3">Wrapped form:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.2-2.4">
+              <p id="section-4.3.2-2.4.1">The bundle's encoding is carried as the content of a single
+definite-length CBOR byte string (<span>[<a href="#RFC8949" class="cite xref">RFC8949</a>], <a href="https://rfc-editor.org/rfc/rfc8949#section-3.1" class="relref">Section 3.1</a></span>). The byte
+string head declares the bundle's exact length before any bundle data is
+read.<a href="#section-4.3.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
+<p id="section-4.3.2-3">A receiver <span class="bcp14">MUST</span> accept both forms and distinguishes them by the first octet
+of the stream:<a href="#section-4.3.2-3" class="pilcrow">¶</a></p>
 <span id="name-stream-content-dispatch"></span><div id="tab-first-octet">
 <table class="left" id="table-1">
             <caption>
@@ -1502,20 +1555,20 @@ of the stream:<a href="#section-4.3.1-3" class="pilcrow">¶</a></p>
             </tbody>
           </table>
 </div>
-<p id="section-4.3.1-5">An indefinite-length byte string (first octet 0x5f) is not permitted, as it
+<p id="section-4.3.2-5">An indefinite-length byte string (first octet 0x5f) is not permitted, as it
 would not convey the bundle's length. Receipt of any first octet not listed
 above, of an indefinite-length byte string, or of a byte string whose
 content does not begin with a recognized bundle version octet, is a protocol
-error and the receiver <span class="bcp14">MUST</span> close the connection with <code>QBCL_PROTOCOL_ERROR</code>.<a href="#section-4.3.1-5" class="pilcrow">¶</a></p>
-<p id="section-4.3.1-6">In the wrapped form, the receiver reads exactly the declared number of
+error and the receiver <span class="bcp14">MUST</span> close the connection with <code>QBCL_PROTOCOL_ERROR</code>.<a href="#section-4.3.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-6">In the wrapped form, the receiver reads exactly the declared number of
 content octets and then expects FIN. Receipt of additional data after the
 declared length, or of FIN before the declared length has been received, is
 a protocol error and the receiver <span class="bcp14">MUST</span> close the connection with
 <code>QBCL_PROTOCOL_ERROR</code>. In the direct form, the entire stream content is
 delivered to the BPA as a single bundle; whether that content constitutes
 exactly one well-formed bundle is determined by the BPA, not by the
-convergence layer.<a href="#section-4.3.1-6" class="pilcrow">¶</a></p>
-<p id="section-4.3.1-7">The two forms serve different needs. The wrapped form allows a receiver to
+convergence layer.<a href="#section-4.3.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-7">The two forms serve different needs. The wrapped form allows a receiver to
 learn the bundle's size from the first few octets and to reject an
 oversized bundle (<a href="#cancellation" class="auto internal xref">Section 4.6</a>) or pre-allocate storage before the bulk
 of the data arrives. The direct form allows a sender to begin transmitting a
@@ -1525,41 +1578,41 @@ forwarding). A sender <span class="bcp14">SHOULD</span> use the wrapped form whe
 length is known in advance, which is the usual case for a bundle held in
 storage, and <span class="bcp14">MAY</span> use the direct form otherwise. A receiver <span class="bcp14">MAY</span>, as a matter
 of local policy, decline direct-form bundles by cancelling the transfer with
-<code>QBCL_LENGTH_REQUIRED</code>.<a href="#section-4.3.1-7" class="pilcrow">¶</a></p>
-<p id="section-4.3.1-8">This framing is agnostic to the bundle version carried. Qubicle
+<code>QBCL_LENGTH_REQUIRED</code>.<a href="#section-4.3.2-7" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-8">This framing is agnostic to the bundle version carried. Qubicle
 implementations <span class="bcp14">MUST</span> support BPv7 bundles. Support for other bundle versions,
 including BPv6, is <span class="bcp14">OPTIONAL</span>; a receiver that recognizes but does not support
 the version of an incoming bundle <span class="bcp14">SHOULD</span> cancel the transfer with
 <code>QBCL_UNSUPPORTED_BUNDLE_VERSION</code> rather than treating it as a protocol
-error.<a href="#section-4.3.1-8" class="pilcrow">¶</a></p>
+error.<a href="#section-4.3.2-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="bundle-flow-in-both-directions">
-<section id="section-4.3.2">
+<section id="section-4.3.3">
           <h4 id="name-bundle-flow-in-both-directi">
-<a href="#section-4.3.2" class="section-number selfRef">4.3.2. </a><a href="#name-bundle-flow-in-both-directi" class="section-name selfRef">Bundle Flow in Both Directions</a>
+<a href="#section-4.3.3" class="section-number selfRef">4.3.3. </a><a href="#name-bundle-flow-in-both-directi" class="section-name selfRef">Bundle Flow in Both Directions</a>
           </h4>
-<p id="section-4.3.2-1">Both peers can send bundles simultaneously. Each peer creates unidirectional streams to send its bundles. QUIC stream IDs inherently separate client-initiated streams (IDs 2, 6, 10...) from server-initiated streams (IDs 3, 7, 11...), ensuring no collision between the two directions of bundle flow.<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
-<p id="section-4.3.2-2">Qubicle uses only unidirectional streams. Peers <span class="bcp14">SHOULD</span> set the
+<p id="section-4.3.3-1">Both peers can send bundles simultaneously. Each peer creates unidirectional streams to send its bundles. QUIC stream IDs inherently separate client-initiated streams (IDs 2, 6, 10...) from server-initiated streams (IDs 3, 7, 11...), ensuring no collision between the two directions of bundle flow.<a href="#section-4.3.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.3-2">Qubicle uses only unidirectional streams. Peers <span class="bcp14">SHOULD</span> set the
 <code>initial_max_streams_bidi</code> transport parameter to 0. A peer that
 nonetheless receives a bidirectional stream <span class="bcp14">MUST</span> treat this as a protocol
-error and close the connection with <code>QBCL_PROTOCOL_ERROR</code>.<a href="#section-4.3.2-2" class="pilcrow">¶</a></p>
+error and close the connection with <code>QBCL_PROTOCOL_ERROR</code>.<a href="#section-4.3.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="stream-selection-and-priority">
-<section id="section-4.3.3">
+<section id="section-4.3.4">
           <h4 id="name-stream-selection-and-priori">
-<a href="#section-4.3.3" class="section-number selfRef">4.3.3. </a><a href="#name-stream-selection-and-priori" class="section-name selfRef">Stream Selection and Priority</a>
+<a href="#section-4.3.4" class="section-number selfRef">4.3.4. </a><a href="#name-stream-selection-and-priori" class="section-name selfRef">Stream Selection and Priority</a>
           </h4>
-<p id="section-4.3.3-1">Senders <span class="bcp14">MAY</span> use QUIC stream priorities to expedite higher-priority bundles. The mapping of bundle priority to QUIC stream priority is an implementation matter.<a href="#section-4.3.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.4-1">Senders <span class="bcp14">MAY</span> use QUIC stream priorities to expedite higher-priority bundles. The mapping of bundle priority to QUIC stream priority is an implementation matter.<a href="#section-4.3.4-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="flow-control">
-<section id="section-4.3.4">
+<section id="section-4.3.5">
           <h4 id="name-flow-control-and-stream-lim">
-<a href="#section-4.3.4" class="section-number selfRef">4.3.4. </a><a href="#name-flow-control-and-stream-lim" class="section-name selfRef">Flow Control and Stream Limits</a>
+<a href="#section-4.3.5" class="section-number selfRef">4.3.5. </a><a href="#name-flow-control-and-stream-lim" class="section-name selfRef">Flow Control and Stream Limits</a>
           </h4>
-<p id="section-4.3.4-1">Qubicle relies entirely on QUIC flow control to manage receiver resources; no
+<p id="section-4.3.5-1">Qubicle relies entirely on QUIC flow control to manage receiver resources; no
 convergence-layer mechanism is defined. A receiver controls the number of
 bundles concurrently in transfer through the <code>initial_max_streams_uni</code>
 transport parameter and subsequent <code>MAX_STREAMS</code> frames, the amount of any
@@ -1568,11 +1621,11 @@ and <code>MAX_STREAM_DATA</code>, and total buffered data through <code>initial_
 and <code>MAX_DATA</code>. A receiver that is temporarily unable to accept more data
 simply withholds credit, causing the sender to pause without error.
 Receivers <span class="bcp14">SHOULD</span> size these limits to reflect the storage they are actually
-prepared to commit to in-progress bundles; see <a href="#flow-control-sizing" class="auto internal xref">Section 7.3</a>.<a href="#section-4.3.4-1" class="pilcrow">¶</a></p>
-<p id="section-4.3.4-2">QUIC stream identifiers are 62-bit values, so the total number of streams
+prepared to commit to in-progress bundles; see <a href="#flow-control-sizing" class="auto internal xref">Section 7.3</a>.<a href="#section-4.3.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.5-2">QUIC stream identifiers are 62-bit values, so the total number of streams
 over a connection's lifetime is not a practical constraint. If an
 implementation nonetheless reaches an internal limit on stream creation, it
-<span class="bcp14">SHOULD</span> gracefully close the connection and establish a new one.<a href="#section-4.3.4-2" class="pilcrow">¶</a></p>
+<span class="bcp14">SHOULD</span> gracefully close the connection and establish a new one.<a href="#section-4.3.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1658,7 +1711,7 @@ subsequently received on that stream. A cancelled transfer is reported to the
 sending BPA as a failed transfer; the bundle itself is unaffected and <span class="bcp14">MAY</span> be
 retransmitted on a new stream or via another CLA, subject to BPA policy.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
 <p id="section-4.6-5">A receiver enforcing a maximum receivable bundle size can reject a
-wrapped-form bundle (<a href="#stream-content" class="auto internal xref">Section 4.3.1</a>) as soon as the byte string head has
+wrapped-form bundle (<a href="#stream-content" class="auto internal xref">Section 4.3.2</a>) as soon as the byte string head has
 been read, before any bundle data is received. A direct-form bundle can only
 be rejected once the received octet count exceeds the limit, by which time
 that much bandwidth has been consumed. Receivers for which this matters can
@@ -1743,7 +1796,7 @@ frame. QUIC application error codes are 62-bit unsigned integers.<a href="#secti
           <tr>
             <td class="text-left" rowspan="1" colspan="1">0x06</td>
             <td class="text-left" rowspan="1" colspan="1">QBCL_LENGTH_REQUIRED</td>
-            <td class="text-left" rowspan="1" colspan="1">Receiver policy does not accept direct-form bundles (<a href="#stream-content" class="auto internal xref">Section 4.3.1</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Receiver policy does not accept direct-form bundles (<a href="#stream-content" class="auto internal xref">Section 4.3.2</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">0x07</td>
@@ -1800,7 +1853,7 @@ certificate provisioning is available via the ACME extensions defined in
 <a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-denial-of-service" class="section-name selfRef">Denial of Service</a>
         </h3>
 <p id="section-6.3-1">QUIC provides built-in protection against many denial-of-service attacks, including address validation and amplification prevention.<a href="#section-6.3-1" class="pilcrow">¶</a></p>
-<p id="section-6.3-2">QUIC flow control (<a href="#flow-control" class="auto internal xref">Section 4.3.4</a>) is the primary means of bounding the
+<p id="section-6.3-2">QUIC flow control (<a href="#flow-control" class="auto internal xref">Section 4.3.5</a>) is the primary means of bounding the
 resources a peer can consume; receivers <span class="bcp14">SHOULD</span> configure it accordingly
 rather than accepting unbounded data and discarding it afterwards.<a href="#section-6.3-2" class="pilcrow">¶</a></p>
 </section>
@@ -1879,7 +1932,7 @@ may be the subject of environment-specific QUIC profiles.<a href="#section-7.2-3
         <h3 id="name-flow-control-sizing">
 <a href="#section-7.3" class="section-number selfRef">7.3. </a><a href="#name-flow-control-sizing" class="section-name selfRef">Flow Control Sizing</a>
         </h3>
-<p id="section-7.3-1">The QUIC flow control limits described in <a href="#flow-control" class="auto internal xref">Section 4.3.4</a> interact.
+<p id="section-7.3-1">The QUIC flow control limits described in <a href="#flow-control" class="auto internal xref">Section 4.3.5</a> interact.
 Because a sender must wait for stream credit before opening a stream, a
 receiver that grants very few concurrent streams limits sender parallelism;
 conversely, a receiver that grants many streams but little per-stream data
