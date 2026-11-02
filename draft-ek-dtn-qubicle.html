@@ -8,7 +8,7 @@
 <meta content="Rick Taylor" name="author">
 <meta content="Erik Kline" name="author">
 <meta content="
-       This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security. Every reliable transfer carries one bundle on its own QUIC unidirectional stream, wrapped in a definite-length CBOR byte string, with no further application-layer framing. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTP-U) over QUIC datagrams. 
+       This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security. Reliable transfers use QUIC unidirectional streams carrying CBOR Sequences of definite-length byte strings, each containing exactly one bundle. A stream can carry successive bundles without closing between them. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTP-U) over QUIC datagrams. 
     " name="description">
 <meta content="xml2rfc 3.34.1" name="generator">
 <meta content="DTN" name="keyword">
@@ -1084,7 +1084,7 @@ svg {
 <h1 id="title">DTN QUIC Bundle Protocol Convergence Layer (qubicle)</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security. Every reliable transfer carries one bundle on its own QUIC unidirectional stream, wrapped in a definite-length CBOR byte string, with no further application-layer framing. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTP-U) over QUIC datagrams.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">This document specifies a minimal convergence layer protocol for transferring Bundle Protocol version 7 (BPv7) bundles over QUIC. The protocol leverages QUIC's native capabilities for reliable streaming, connection management, and security. Reliable transfers use QUIC unidirectional streams carrying CBOR Sequences of definite-length byte strings, each containing exactly one bundle. A stream can carry successive bundles without closing between them. Unreliable transfers use the Bundle Transfer Protocol - Unidirectional (BTP-U) over QUIC datagrams.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1295,9 +1295,11 @@ capabilities rather than layering additional protocol machinery.<a href="#sectio
 <span class="break"></span><dl class="dlParallel" id="section-1-4">
         <dt id="section-1-4.1">Reliable Service:</dt>
         <dd style="margin-left: 1.5em" id="section-1-4.2">
-          <p id="section-1-4.2.1">Bundles are transferred using reliable, ordered QUIC stream transport, one
-bundle per stream. This does not guarantee successful completion across
-arbitrary contact loss or receiver failure.<a href="#section-1-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-1-4.2.1">Bundles are transferred using reliable, ordered QUIC stream transport,
+with successive bundles permitted on each unidirectional stream. Each
+bundle is wrapped in a definite-length CBOR byte string. This does not
+guarantee successful completion across arbitrary contact loss or receiver
+failure.<a href="#section-1-4.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-1-4.3">Unreliable Service:</dt>
@@ -1433,23 +1435,33 @@ reached.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
         <h3 id="name-reliable-bundle-transfer">
 <a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-reliable-bundle-transfer" class="section-name selfRef">Reliable Bundle Transfer</a>
         </h3>
-<p id="section-4.3-1">For reliable transfer, each bundle is sent on a dedicated QUIC unidirectional stream:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<p id="section-4.3-1">For reliable transfer, bundles are sent as successive items on QUIC
+unidirectional streams:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-4.3-2">
 <li id="section-4.3-2.1">
-            <p id="section-4.3-2.1.1">The sender creates a new unidirectional stream.<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-4.3-2.1.1">The sender selects an existing open sending stream at an item boundary,
+or creates a new unidirectional stream subject to <a href="#flow-control" class="auto internal xref">Section 4.3.5</a>.<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.3-2.2">
-            <p id="section-4.3-2.2.1">The sender writes exactly one bundle to the stream, wrapped in a
-definite-length CBOR byte string as described in <a href="#stream-content" class="auto internal xref">Section 4.3.2</a>.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-4.3-2.2.1">The sender writes a complete bundle wrapped in a definite-length CBOR
+byte string as described in <a href="#stream-content" class="auto internal xref">Section 4.3.2</a>.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.3-2.3">
-            <p id="section-4.3-2.3.1">The sender closes the stream by sending a STREAM frame with the FIN bit set.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-4.3-2.3.1">The sender <span class="bcp14">MAY</span> append another bundle after writing the complete preceding
+item, without closing the stream or waiting for acknowledgment of that
+item. Normal QUIC transmission constraints still apply.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.3-2.4">
+            <p id="section-4.3-2.4.1">When finished with the stream, the sender closes it at an item boundary
+by sending a STREAM frame with the FIN bit set.<a href="#section-4.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-4.3-3">The receiver delivers the complete bundle to the BPA only after receiving
-exactly the declared content length and a clean stream end as described in
-<a href="#stream-content" class="auto internal xref">Section 4.3.2</a>. Receipt of FIN alone is insufficient: all bytes
-preceding the final stream offset must also have arrived. The receiver <span class="bcp14">MUST NOT</span> deliver an incomplete bundle.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<p id="section-4.3-3">Receivers <span class="bcp14">MUST</span> support multiple items per stream. Senders remain free to
+use a separate stream for each bundle. The receiver recognizes a complete
+bundle after consuming its byte-string head and all declared content bytes,
+and processes and hands off an accepted bundle to the BPA without waiting
+for FIN or the next item. The receiver <span class="bcp14">MUST NOT</span> deliver an incomplete
+bundle.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
 <div id="transfer-completion">
 <section id="section-4.3.1">
           <h4 id="name-transfer-completion">
@@ -1457,11 +1469,23 @@ preceding the final stream offset must also have arrived. The receiver <span cla
           </h4>
 <p id="section-4.3.1-1">QUIC provides reliable, in-order stream transport. This revision of Qubicle
 defines no convergence-layer acknowledgment; per-bundle reception reporting
-remains an open issue (<a href="#reception-reporting-todo" class="auto internal xref">Section 4.3.1.1</a>). A reliable transfer is
-complete from the sender's transport perspective when the QUIC endpoint
-reports that all stream data, including the FIN, has been acknowledged by
-the peer.<a href="#section-4.3.1-1" class="pilcrow">¶</a></p>
-<p id="section-4.3.1-2">This completion signal is generated by the peer's QUIC transport
+remains an open issue (<a href="#reception-reporting-todo" class="auto internal xref">Section 4.3.1.1</a>). An individual bundle's
+transfer is complete from the sender's transport perspective when all
+stream bytes comprising its item, including the CBOR byte-string head,
+have been acknowledged by the peer's QUIC endpoint. Acknowledgment of FIN
+is not required for per-bundle transport completion.<a href="#section-4.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-2">Implementations <span class="bcp14">MUST</span> associate each outgoing bundle with the stream-offset
+range occupied by its item and establish acknowledgment of every byte in
+that range before reporting Transmission Success. A successful write to
+the QUIC API, available flow-control credit, or acknowledgment of a later
+offset alone is not proof that the entire item was acknowledged. QUIC APIs
+vary in whether they expose sufficient acknowledgment information; not
+every implementation can provide immediate per-bundle completion
+indications. An implementation might have to defer a success indication
+until its API provides sufficient evidence. This revision does not specify
+a portable API mapping or an alternative completion signal for APIs that
+cannot provide that evidence.<a href="#section-4.3.1-2" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-3">This completion signal is generated by the peer's QUIC transport
 implementation upon receipt of the data. It confirms that the data reached
 the peer's QUIC endpoint; it does not confirm that the peer's convergence
 layer has read the data, nor that the peer's BPA has accepted the bundle. In
@@ -1469,8 +1493,8 @@ particular, data acknowledged by the QUIC endpoint but not yet consumed by
 the receiving application can be lost if the receiving process fails.
 Receivers <span class="bcp14">SHOULD</span> therefore read stream data promptly and pass each completed
 bundle to the BPA without unnecessary delay, so as to minimize the interval
-during which acknowledged data is held only in transport buffers.<a href="#section-4.3.1-2" class="pilcrow">¶</a></p>
-<p id="section-4.3.1-3">Transport completion is consequently distinct from complete reception and
+during which acknowledged data is held only in transport buffers.<a href="#section-4.3.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-4">Transport completion is consequently distinct from complete reception and
 handoff by the remote CLA, and from reception processing by the remote BPA.
 It is not a sufficient basis for a sending BPA to conclude that the
 next-hop BPA has received a bundle. Where such assurance is required, it
@@ -1479,40 +1503,53 @@ transport completion. Ordinary status reporting (<span>[<a href="#RFC9171" class
 is not by itself a complete forwarding-node solution: the bundle source
 controls the primary-block report request and report-to destination. The
 integration needed for forwarding-node assurance remains unspecified in
-this revision; see <a href="#reception-reporting-todo" class="auto internal xref">Section 4.3.1.1</a>.<a href="#section-4.3.1-3" class="pilcrow">¶</a></p>
-<p id="section-4.3.1-4">In terms of the convergence layer service model, Qubicle provides the
-following indications to the BPA:<a href="#section-4.3.1-4" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4.3.1-5">
-            <dt id="section-4.3.1-5.1">Transmission Success:</dt>
-            <dd style="margin-left: 1.5em" id="section-4.3.1-5.2">
-              <p id="section-4.3.1-5.2.1">All stream data for the bundle has been acknowledged by the peer's QUIC
-endpoint, as described above.<a href="#section-4.3.1-5.2.1" class="pilcrow">¶</a></p>
+this revision; see <a href="#reception-reporting-todo" class="auto internal xref">Section 4.3.1.1</a>.<a href="#section-4.3.1-4" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-5">In terms of the convergence layer service model, Qubicle uses the following
+per-bundle indications to the BPA, subject to the API limitations above:<a href="#section-4.3.1-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.3.1-6">
+            <dt id="section-4.3.1-6.1">Transmission Success:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-6.2">
+              <p id="section-4.3.1-6.2.1">Acknowledgment of every byte in the item's stream-offset range, including
+its CBOR head, has been established. Neither stream closure nor
+acknowledgment of subsequent items is required.<a href="#section-4.3.1-6.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-4.3.1-5.3">Transmission Failure:</dt>
-            <dd style="margin-left: 1.5em" id="section-4.3.1-5.4">
-              <p id="section-4.3.1-5.4.1">The stream was reset by either peer (<a href="#cancellation" class="auto internal xref">Section 4.6</a>), or the connection
-closed before all stream data was acknowledged.<a href="#section-4.3.1-5.4.1" class="pilcrow">¶</a></p>
+<dt id="section-4.3.1-6.3">Transmission Failure:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-6.4">
+              <p id="section-4.3.1-6.4.1">The stream was terminated through cancellation (<a href="#cancellation" class="auto internal xref">Section 4.6</a>), or the
+connection closed, before transport completion of this item could be
+established. This does not prove that the receiving BPA did not receive
+the bundle.<a href="#section-4.3.1-6.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-4.3.1-5.5">Reception Success:</dt>
-            <dd style="margin-left: 1.5em" id="section-4.3.1-5.6">
-              <p id="section-4.3.1-5.6.1">A complete bundle has been received (exactly the declared content length
-and clean stream completion, with all bytes preceding the final stream
-offset received, as specified in <a href="#stream-content" class="auto internal xref">Section 4.3.2</a>) and passed to the
-BPA. This handoff is distinct from the BPA's reception processing.<a href="#section-4.3.1-5.6.1" class="pilcrow">¶</a></p>
+<dt id="section-4.3.1-6.5">Reception Success:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-6.6">
+              <p id="section-4.3.1-6.6.1">The complete byte-string head and exactly the declared content length
+have been consumed, and the accepted bundle has been passed to the BPA,
+without waiting for FIN or another item. This handoff is distinct from
+the BPA's reception processing.<a href="#section-4.3.1-6.6.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
-<dt id="section-4.3.1-5.7">Reception Failure:</dt>
-            <dd style="margin-left: 1.5em" id="section-4.3.1-5.8">
-              <p id="section-4.3.1-5.8.1">The stream was reset by either peer, or the connection closed before the
-bundle was complete; any partial data has been discarded.<a href="#section-4.3.1-5.8.1" class="pilcrow">¶</a></p>
+<dt id="section-4.3.1-6.7">Reception Failure:</dt>
+            <dd style="margin-left: 1.5em" id="section-4.3.1-6.8">
+              <p id="section-4.3.1-6.8.1">The item was rejected, truncated at clean stream end, or interrupted by
+stream cancellation or connection loss before completion and handoff;
+any partial bundle data has been discarded.<a href="#section-4.3.1-6.8.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
-<p id="section-4.3.1-6">Qubicle does not provide intermediate progress indications; a BPA requiring
+<p id="section-4.3.1-7">A later truncated, malformed, or interrupted item does not revoke Reception
+Success for bundles already completed and handed off. Likewise, a later
+stream reset or connection loss does not revoke an established Transmission
+Success for an earlier item. Transport success still does not establish
+remote CLA handoff or BPA reception. A sender <span class="bcp14">MUST NOT</span> issue both
+Transmission Success and Transmission Failure for the same transmission
+attempt. Once either terminal indication has been issued, later transport
+events, including delayed acknowledgments after cancellation, do not
+reverse it. A retry is a separate transmission attempt.<a href="#section-4.3.1-7" class="pilcrow">¶</a></p>
+<p id="section-4.3.1-8">Qubicle does not provide intermediate progress indications; a BPA requiring
 them can observe stream-level flow control state where the QUIC
-implementation exposes it.<a href="#section-4.3.1-6" class="pilcrow">¶</a></p>
+implementation exposes it.<a href="#section-4.3.1-8" class="pilcrow">¶</a></p>
 <div id="reception-reporting-todo">
 <section id="section-4.3.1.1">
             <h5 id="name-open-issue-bundle-reception">
@@ -1543,15 +1580,19 @@ failure after transport acknowledgment.<a href="#section-4.3.1.1-3" class="pilcr
           <h4 id="name-stream-content">
 <a href="#section-4.3.2" class="section-number selfRef">4.3.2. </a><a href="#name-stream-content" class="section-name selfRef">Stream Content</a>
           </h4>
-<p id="section-4.3.2-1">Each reliable-transfer stream <span class="bcp14">MUST</span> contain exactly one definite-length
-CBOR byte string (<span>[<a href="#RFC8949" class="cite xref">RFC8949</a>], <a href="https://rfc-editor.org/rfc/rfc8949#section-3.1" class="relref">Section 3.1</a></span>), whose content is the complete
-encoding of exactly one bundle. The byte string's length <span class="bcp14">MUST</span> equal the
-number of octets in the encoded bundle, excluding the byte string head.
-The sender <span class="bcp14">MUST</span> know the outgoing encoded bundle's length before writing
-the head.<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
-<p id="section-4.3.2-2">Unwrapped bundles, indefinite-length byte strings, and other outer CBOR
+<p id="section-4.3.2-1">Each reliable-transfer stream carries a CBOR Sequence <span>[<a href="#RFC8742" class="cite xref">RFC8742</a>]</span> whose
+items <span class="bcp14">MUST</span> be definite-length CBOR byte strings. Each byte string <span class="bcp14">MUST</span>
+contain the complete encoding of exactly one bundle. Its declared length
+is the encoded bundle length in octets, excluding the byte string head
+(<span>[<a href="#RFC8949" class="cite xref">RFC8949</a>], <a href="https://rfc-editor.org/rfc/rfc8949#section-3.1" class="relref">Section 3.1</a></span>). The sender <span class="bcp14">MUST</span> know the outgoing encoded
+bundle's length before writing the head.<a href="#section-4.3.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-2">The sequence has no enclosing array, bundle count, or separator. QUIC
+STREAM frame boundaries have no significance for this framing. A sender
+<span class="bcp14">MUST NOT</span> interleave bytes of different bundle items within one stream.<a href="#section-4.3.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-3">Unwrapped bundles, indefinite-length byte strings, and other outer CBOR
 types are protocol errors. An empty byte string cannot contain a bundle
-and is a protocol error. The first octet is interpreted as follows:<a href="#section-4.3.2-2" class="pilcrow">¶</a></p>
+and is a protocol error. The first octet of each item is interpreted as
+follows:<a href="#section-4.3.2-3" class="pilcrow">¶</a></p>
 <span id="name-stream-content-dispatch"></span><div id="tab-first-octet">
 <table class="left" id="table-1">
             <caption>
@@ -1576,37 +1617,42 @@ and is a protocol error. The first octet is interpreted as follows:<a href="#sec
             </tbody>
           </table>
 </div>
-<p id="section-4.3.2-4">The receiver consumes exactly the declared number of content octets and
-requires a clean stream end immediately afterward. A clean stream end
-before that length, an incomplete byte-string head at clean end (including
-an empty stream), or additional bytes beyond the declared content are
-protocol errors. A clean stream end requires FIN and receipt of all bytes
-preceding the final stream offset; FIN alone does not establish that
-missing bytes have arrived. For malformed framing, the receiver <span class="bcp14">MUST</span> close
-the connection with <code>QBCL_PROTOCOL_ERROR</code>. Stream reset or connection loss
-during transfer instead results in an incomplete/failed transfer
-(<a href="#transfer-completion" class="auto internal xref">Section 4.3.1</a>), not a clean but malformed stream end. The
-receiver <span class="bcp14">MUST NOT</span> deliver an incomplete bundle.<a href="#section-4.3.2-4" class="pilcrow">¶</a></p>
-<p id="section-4.3.2-5">Within the byte string, the first content octet identifies BPv7 by 0x9f
+<p id="section-4.3.2-5">The receiver consumes the byte-string head and exactly the declared number
+of content octets to recognize a complete bundle. It processes and hands
+off an accepted bundle without waiting for FIN or the next item. Bytes
+following a complete item begin the next item.<a href="#section-4.3.2-5" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-6">FIN is valid at an item boundary, including before any item: an empty,
+cleanly closed stream is an empty sequence. A clean stream end partway
+through a byte-string head or its declared content is malformed framing.
+A clean stream end requires FIN and receipt of all bytes preceding the
+final stream offset; FIN alone does not establish that missing bytes have
+arrived. For malformed framing, the receiver <span class="bcp14">MUST</span> close the connection
+with <code>QBCL_PROTOCOL_ERROR</code>. Stream reset or connection loss instead
+interrupts any incomplete transfer (<a href="#transfer-completion" class="auto internal xref">Section 4.3.1</a>); it is not a
+clean but malformed stream end. The receiver <span class="bcp14">MUST NOT</span> deliver an incomplete
+bundle. Bundles already completed and handed off remain completed even if
+a later item is truncated, malformed, or interrupted.<a href="#section-4.3.2-6" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-7">Within each byte string, the first content octet identifies BPv7 by 0x9f
 (the indefinite-length outer array, <span>[<a href="#RFC9171" class="cite xref">RFC9171</a>], <a href="https://rfc-editor.org/rfc/rfc9171#section-4.1" class="relref">Section 4.1</a></span>), or BPv6 by
 its version octet 0x06 (<span>[<a href="#RFC5050" class="cite xref">RFC5050</a>]</span>). Content that does not begin with a
 recognized bundle version encoding is a protocol error, and the receiver
 <span class="bcp14">MUST</span> close the connection with <code>QBCL_PROTOCOL_ERROR</code>. Qubicle
 implementations <span class="bcp14">MUST</span> support BPv7 bundles. Support for other bundle
 versions, including BPv6, is <span class="bcp14">OPTIONAL</span>; a receiver that recognizes but does
-not support the version of an incoming bundle <span class="bcp14">SHOULD</span> cancel the transfer
+not support the version of an incoming bundle <span class="bcp14">SHOULD</span> cancel the stream
 with <code>QBCL_UNSUPPORTED_BUNDLE_VERSION</code> rather than treating it as a protocol
-error. The wrapper does not change the inner BPv7 encoding, including its
-indefinite-length outer array.<a href="#section-4.3.2-5" class="pilcrow">¶</a></p>
-<p id="section-4.3.2-6">Declaring the bundle length before its content allows the receiver to make
+error. This cancellation affects the stream, not just that item; see
+<a href="#cancellation" class="auto internal xref">Section 4.6</a>. The wrapper does not change the inner BPv7 encoding,
+including its indefinite-length outer array.<a href="#section-4.3.2-7" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-8">Declaring the bundle length before its content allows the receiver to make
 admission and storage decisions while transfers compete for stream slots,
 flow-control credit, and processing resources. The declaration supports
-these decisions but does not guarantee progress or prevent starvation.<a href="#section-4.3.2-6" class="pilcrow">¶</a></p>
-<p id="section-4.3.2-7">Streaming, including cut-through forwarding, remains possible when the
+these decisions but does not guarantee progress or prevent starvation.<a href="#section-4.3.2-8" class="pilcrow">¶</a></p>
+<p id="section-4.3.2-9">Streaming, including cut-through forwarding, remains possible when the
 exact outgoing encoded length is known before transmission. Forwarding an
 unknown-length outgoing encoding is not supported. The framing requirement
 applies only to reliable stream transfers; unreliable transfers retain
-<span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> encapsulation (<a href="#unreliable-transfer" class="auto internal xref">Section 4.4</a>).<a href="#section-4.3.2-7" class="pilcrow">¶</a></p>
+<span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> encapsulation (<a href="#unreliable-transfer" class="auto internal xref">Section 4.4</a>).<a href="#section-4.3.2-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="bundle-flow-in-both-directions">
@@ -1626,22 +1672,26 @@ error and close the connection with <code>QBCL_PROTOCOL_ERROR</code>.<a href="#s
           <h4 id="name-stream-selection-and-priori">
 <a href="#section-4.3.4" class="section-number selfRef">4.3.4. </a><a href="#name-stream-selection-and-priori" class="section-name selfRef">Stream Selection and Priority</a>
           </h4>
-<p id="section-4.3.4-1">A sender <span class="bcp14">MAY</span> implement bundle priority by choosing which pending bundles
-to start and which active streams to supply with additional data. It <span class="bcp14">MAY</span>
-also use stream-priority facilities exposed by its QUIC implementation
+<p id="section-4.3.4-1">A sender <span class="bcp14">MAY</span> implement bundle priority by scheduling data across multiple
+open streams and selecting which pending bundle to append to each stream,
+or whether to open a new stream. It <span class="bcp14">MAY</span> also use stream-priority facilities
+exposed by its QUIC implementation
 (<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-2.3" class="relref">Section 2.3</a></span>). Qubicle defines no priority signaling on the
 wire. Scheduling remains subject to available stream and connection
 flow-control credit and QUIC congestion control. Supplying data to a QUIC
 implementation does not guarantee immediate transmission or preemption of
 data already queued inside it.<a href="#section-4.3.4-1" class="pilcrow">¶</a></p>
-<p id="section-4.3.4-2">Queued priority classes are distinct from active scheduling lanes. Here,
-"lane" is only an explanatory term for an active stream-backed transfer,
-not a protocol object. Available stream concurrency (<a href="#flow-control" class="auto internal xref">Section 4.3.5</a>)
-bounds the number of simultaneous lanes, not the number of priority values
-an implementation may assign to queued bundles. Every new bundle uses a
-new stream; a lane is not a persistent stream carrying successive bundles.<a href="#section-4.3.4-2" class="pilcrow">¶</a></p>
-<p id="section-4.3.4-3">Occupying every available stream slot with lower-priority transfers can
-delay starting a newly arrived higher-priority bundle. Strict priority can
+<p id="section-4.3.4-2">A stream can serve as a persistent scheduling lane for successive bundles;
+"lane" is explanatory, not a separate protocol object. Bundles on one
+stream are serialized: a subsequent bundle cannot overtake an earlier item,
+and bytes of different items <span class="bcp14">MUST NOT</span> be interleaved. Independent
+scheduling requires different streams. Queued priority classes are distinct
+from these lanes. The number of lanes and their relationship to priority
+classes are implementation policy within QUIC's limits (<a href="#flow-control" class="auto internal xref">Section 4.3.5</a>);
+there is no mandatory priority-to-stream mapping.<a href="#section-4.3.4-2" class="pilcrow">¶</a></p>
+<p id="section-4.3.4-3">If every usable stream has lower-priority items ahead of a newly arrived
+higher-priority bundle and no new stream can be opened, that bundle can be
+delayed. Strict priority can
 indefinitely defer lower-priority transfers. If favored streams cannot
 progress, refusing to service other eligible streams can leave usable
 contact capacity idle. Fairness, admission policy, and any reservation of
@@ -1654,38 +1704,30 @@ fixes the number of priority classes nor requires fair scheduling.<a href="#sect
           <h4 id="name-flow-control-and-stream-lim">
 <a href="#section-4.3.5" class="section-number selfRef">4.3.5. </a><a href="#name-flow-control-and-stream-lim" class="section-name selfRef">Flow Control and Stream Limits</a>
           </h4>
-<p id="section-4.3.5-1">For each transfer direction independently, concurrent reliable bundle
-transfers are bounded by:<a href="#section-4.3.5-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-4.3.5-2">
-<pre>
-min(sender-local outgoing-stream concurrency limit,
-    receiver-permitted incoming-stream concurrency)
-</pre><a href="#section-4.3.5-2" class="pilcrow">¶</a>
-</div>
-<p id="section-4.3.5-3">This is a conceptual upper bound, not a promise that this many streams can
-always make progress. It is distinct from QUIC's on-wire stream-opening
-limits (<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-4.6" class="relref">Section 4.6</a></span>): <code>initial_max_streams_uni</code> and subsequent
-<code>MAX_STREAMS</code> values limit the cumulative number of unidirectional streams
-the peer may open, not merely the number currently open. Closing a stream
-does not by itself grant permission to open another; the receiver supplies
-additional credit. The sender's own advertised incoming-stream limit
-governs the opposite transfer direction. The bound is therefore not the
-minimum of the two peers' advertised transport parameters.<a href="#section-4.3.5-3" class="pilcrow">¶</a></p>
-<p id="section-4.3.5-4">Actual progress also depends on each stream's available flow-control
-credit, connection-level flow-control credit (<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-4.1" class="relref">Section 4.1</a></span>),
-congestion control, and sender scheduling. QUIC's
-<code>initial_max_stream_data_uni</code> and <code>MAX_STREAM_DATA</code> limit cumulative stream
+<p id="section-4.3.5-1">Qubicle defines no additional stream-count negotiation or parallelism
+limit. For each sending direction, stream creation follows the peer's
+<code>initial_max_streams_uni</code> and subsequent <code>MAX_STREAMS</code>, as specified in
+<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-4.6" class="relref">Section 4.6</a></span>. These are cumulative stream-opening limits, not
+merely limits on the number currently open. Closing a stream does not by
+itself grant permission to open another; the receiver supplies additional
+credit. The two peers' advertisements govern opposite sending directions.
+Implementations may choose to use fewer streams.<a href="#section-4.3.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.3.5-2">Permission to open a stream is distinct from the ability to transmit data.
+Active streams remain subject to stream-level and connection-level
+flow control (<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-4.1" class="relref">Section 4.1</a></span>), congestion control, and sender
+scheduling. QUIC's <code>initial_max_stream_data_uni</code> and <code>MAX_STREAM_DATA</code> limit
+cumulative stream
 data, while <code>initial_max_data</code> and <code>MAX_DATA</code> limit cumulative data across
 streams. These are not fixed limits on data in flight or total bundle
 storage. A receiver that is temporarily unable to accept more data can
 withhold additional credit, causing the sender to pause once available
 credit is exhausted, without error. Receivers <span class="bcp14">SHOULD</span> grant credit based on
 the resources actually available for admitted transfers; see
-<a href="#flow-control-sizing" class="auto internal xref">Section 7.3</a>.<a href="#section-4.3.5-4" class="pilcrow">¶</a></p>
-<p id="section-4.3.5-5">QUIC stream identifiers are 62-bit values, so the total number of streams
-over a connection's lifetime is not a practical constraint. If an
-implementation nonetheless reaches an internal limit on stream creation, it
-<span class="bcp14">SHOULD</span> gracefully close the connection and establish a new one.<a href="#section-4.3.5-5" class="pilcrow">¶</a></p>
+<a href="#flow-control-sizing" class="auto internal xref">Section 7.3</a>.<a href="#section-4.3.5-2" class="pilcrow">¶</a></p>
+<p id="section-4.3.5-3">Persistent streams reduce dependence on replenishment of stream-opening
+credit, but still require replenishment of stream-level and connection-level
+byte credit. If further streams cannot be opened, a sender can continue
+appending items to existing sending streams subject to these constraints.<a href="#section-4.3.5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1728,21 +1770,27 @@ be deployed without congestion control where congestion may occur.<a href="#sect
 <code>CONNECTION_CLOSE</code> from either peer or by expiry of the idle timeout
 (<a href="#keepalive" class="auto internal xref">Section 4.7</a>). Idle timeout is a normal way for a session to end, not an
 error; a peer with further bundles to send simply establishes a new session.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
-<p id="section-4.5-2">A peer wishing to end a session gracefully <span class="bcp14">SHOULD</span> stop opening new streams
-and initiating new <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> transfers, allow in-progress reliable transfers
-in both directions to complete, and then close the connection with
-<code>QBCL_NO_ERROR</code>. Since QUIC provides no means to tell the remote peer that
-no further streams will be opened, a peer <span class="bcp14">SHOULD</span> bound this wait with a
-local timer.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">A peer wishing to end a session gracefully <span class="bcp14">SHOULD</span> stop opening new streams,
+starting new bundle items on existing streams, and initiating new <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span>
+transfers. It <span class="bcp14">SHOULD</span> finish current items where feasible, close its sending
+streams at item boundaries, and allow outstanding reliable transfers in
+both directions to complete before closing the connection with
+<code>QBCL_NO_ERROR</code>. This revision defines no session-level shutdown signal to
+prevent the remote peer from starting further items or streams, so a peer
+<span class="bcp14">SHOULD</span> bound this wait with a local timer.<a href="#section-4.5-2" class="pilcrow">¶</a></p>
 <p id="section-4.5-3">A peer <span class="bcp14">MAY</span> instead close the connection immediately at any time. If it does
 so deliberately while transfers are in progress it <span class="bcp14">SHOULD</span> use
 <code>QBCL_SHUTTING_DOWN</code>; other codes in <a href="#error-codes" class="auto internal xref">Section 5</a> apply for error
 conditions.<a href="#section-4.5-3" class="pilcrow">¶</a></p>
-<p id="section-4.5-4">When a connection closes for any reason, all incomplete reliable transfers
-on it have failed. The receiver <span class="bcp14">MUST</span> discard any partially received bundle
-data, as in <a href="#cancellation" class="auto internal xref">Section 4.6</a>, and the sender's BPA is notified of each
-failure so that the affected bundles can be re-forwarded. Any incomplete
-<span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> transfers on the session are likewise lost.<a href="#section-4.5-4" class="pilcrow">¶</a></p>
+<p id="section-4.5-4">When a connection closes for any reason, the receiver <span class="bcp14">MUST</span> discard any
+partially received bundle data, as in <a href="#cancellation" class="auto internal xref">Section 4.6</a>. Bundles already
+completed and handed off remain completed. The sender reports Transmission
+Failure for outstanding items whose transport completion could not be
+established, subject to the acknowledgment/API limitations in
+<a href="#transfer-completion" class="auto internal xref">Section 4.3.1</a>; established Transmission Success indications are
+not revoked. Re-forwarding is subject to BPA policy, since a failure to
+establish transport completion does not prove non-reception by the remote
+BPA. Any incomplete <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span> transfers on the session are likewise lost.<a href="#section-4.5-4" class="pilcrow">¶</a></p>
 <p id="section-4.5-5">Two peers may establish connections to each other concurrently, resulting in
 more than one session between the same pair of Node IDs. This is permitted
 and is not an error. A peer <span class="bcp14">MAY</span> choose to gracefully close a redundant
@@ -1754,37 +1802,59 @@ session, but <span class="bcp14">MUST</span> accept bundles received on any esta
         <h3 id="name-transfer-cancellation">
 <a href="#section-4.6" class="section-number selfRef">4.6. </a><a href="#name-transfer-cancellation" class="section-name selfRef">Transfer Cancellation</a>
         </h3>
-<p id="section-4.6-1">Either peer may cancel an in-progress reliable transfer.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
-<p id="section-4.6-2">A sender cancels a transfer by sending <code>RESET_STREAM</code> on the bundle's stream
-with an appropriate error code (<a href="#error-codes" class="auto internal xref">Section 5</a>). A sender might do this,
-for example, when the bundle's lifetime expires before transfer completes,
-or when the BPA withdraws the bundle from this CLA.<a href="#section-4.6-2" class="pilcrow">¶</a></p>
-<p id="section-4.6-3">A receiver cancels a transfer by sending <code>STOP_SENDING</code> on the bundle's
-stream with an appropriate error code. The sender <span class="bcp14">MUST</span> respond with
-<code>RESET_STREAM</code> as required by <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-3.5" class="relref">Section 3.5</a></span>. A receiver might do
-this, for example, when the incoming bundle exceeds the receiver's storage
-or policy limits, or when the receiver's BPA is shutting down.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
-<p id="section-4.6-4">On receiving <code>RESET_STREAM</code>, a receiver <span class="bcp14">MUST</span> discard any partially received
-bundle data for that stream and <span class="bcp14">MUST NOT</span> deliver a partial bundle to the BPA.
-A receiver that has sent <code>STOP_SENDING</code> <span class="bcp14">MUST</span> likewise discard any data
-subsequently received on that stream. A cancelled transfer is reported to the
-sending BPA as a failed transfer; the bundle itself is unaffected and <span class="bcp14">MAY</span> be
-retransmitted on a new stream or via another CLA, subject to BPA policy.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
-<p id="section-4.6-5">A receiver enforcing a maximum receivable bundle size can reject a bundle
+<p id="section-4.6-1">Either peer may cancel a reliable-transfer stream. <code>RESET_STREAM</code> and
+<code>STOP_SENDING</code> affect the stream, not one selected bundle item. This
+revision defines no per-bundle cancellation protocol.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
+<p id="section-4.6-2">A sender cancels a stream by sending <code>RESET_STREAM</code> with an appropriate
+error code (<a href="#error-codes" class="auto internal xref">Section 5</a>), subject to QUIC's stream-state rules
+(<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-3" class="relref">Section 3</a></span>). A sender might do this when a bundle's lifetime
+expires or the BPA withdraws a bundle whose item has already been started.
+A sender <span class="bcp14">MUST NOT</span> truncate an item and then append another item on the same
+stream: that would corrupt framing. It must finish the item or terminate
+the stream.<a href="#section-4.6-2" class="pilcrow">¶</a></p>
+<p id="section-4.6-3">A receiver cancels a stream by sending <code>STOP_SENDING</code> with an appropriate
+error code, for example when a bundle exceeds its storage or policy limits,
+or when its BPA is shutting down. The sender <span class="bcp14">MUST</span> handle <code>STOP_SENDING</code>
+according to <span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-3.5" class="relref">Section 3.5</a></span> and the stream-state rules in
+<span>[<a href="#RFC9000" class="cite xref">RFC9000</a>], <a href="https://rfc-editor.org/rfc/rfc9000#section-3.3" class="relref">Section 3.3</a></span>. In particular, a stream in the Send state still
+requires <code>RESET_STREAM</code> even if all item bytes written so far have been
+acknowledged; per-bundle transport completion does not close the stream.<a href="#section-4.6-3" class="pilcrow">¶</a></p>
+<p id="section-4.6-4">Cancelling a stream can abandon its current partial bundle and later
+queued or outstanding bundles. On receiving <code>RESET_STREAM</code>, a receiver
+<span class="bcp14">MUST</span> discard any partially received bundle data for that stream and <span class="bcp14">MUST NOT</span> deliver a partial bundle to the BPA. A receiver that has sent
+<code>STOP_SENDING</code> <span class="bcp14">MUST</span> likewise discard partial data and any subsequently
+received data on that stream. Cancellation does not revoke bundles already
+handed to the receiving BPA.<a href="#section-4.6-4" class="pilcrow">¶</a></p>
+<p id="section-4.6-5">An application error code describes a reason for stream cancellation; it
+does not identify the item that caused it. The sender may have queued
+multiple items ahead of the receiver. Cancellation can also race with
+transport acknowledgment and is not a reliable per-bundle rejection
+notification. The sender reports failure for affected items whose transport
+completion has not been established, as described in
+<a href="#transfer-completion" class="auto internal xref">Section 4.3.1</a>, without revoking established transport success.
+Bundles <span class="bcp14">MAY</span> be re-forwarded subject to BPA policy; a failure indication
+does not establish that they were not received.<a href="#section-4.6-5" class="pilcrow">¶</a></p>
+<p id="section-4.6-6">A receiver enforcing a maximum receivable bundle size can reject a bundle
 based on its declared length as soon as it has read the byte string head
-(<a href="#stream-content" class="auto internal xref">Section 4.3.2</a>), using <code>QBCL_BUNDLE_TOO_LARGE</code>. Payload bytes may
-already have been sent or received at that point. A receiver whose
-available storage cannot accommodate a transfer can cancel it with
-<code>QBCL_STORAGE_EXHAUSTED</code>. Admission and credit policies <span class="bcp14">SHOULD</span> consider
-the declared sizes of active bundles and allow admitted transfers to
-progress toward completion, rather than leaving many partial transfers
-unable to complete (<a href="#flow-control-sizing" class="auto internal xref">Section 7.3</a>).<a href="#section-4.6-5" class="pilcrow">¶</a></p>
-<p id="section-4.6-6">The initial stream flow-control allowance is not an advertised maximum
-bundle size. Receivers need sufficient initial stream and connection
-credit to read the head, which can occupy up to nine octets and itself
-consumes credit. They can then consume or spool data and replenish credit
-incrementally; they need not grant credit for an entire bundle at once.<a href="#section-4.6-6" class="pilcrow">¶</a></p>
-<p id="section-4.6-7">Cancellation of unreliable transfers is governed by <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span>.<a href="#section-4.6-7" class="pilcrow">¶</a></p>
+(<a href="#stream-content" class="auto internal xref">Section 4.3.2</a>), cancelling the stream with <code>QBCL_BUNDLE_TOO_LARGE</code>.
+Payload bytes, including later items, may already have been sent or
+received at that point. A receiver whose available storage cannot
+accommodate a transfer can cancel the stream with <code>QBCL_STORAGE_EXHAUSTED</code>.
+Admission and credit policies <span class="bcp14">SHOULD</span> consider the declared sizes of active
+bundles and allow admitted transfers to progress toward completion, rather
+than leaving many partial transfers
+unable to complete (<a href="#flow-control-sizing" class="auto internal xref">Section 7.3</a>).<a href="#section-4.6-6" class="pilcrow">¶</a></p>
+<p id="section-4.6-7">If a receiver elects to skip a rejected item and continue parsing instead
+of cancelling the stream, it <span class="bcp14">MUST</span> consume exactly the declared content
+length before reading the next head. This does not save transmission
+bandwidth or notify the sender of rejection, and does not relax the
+connection-close requirement for malformed framing.<a href="#section-4.6-7" class="pilcrow">¶</a></p>
+<p id="section-4.6-8">The initial stream flow-control allowance is not an advertised maximum
+bundle size. Receivers need sufficient available stream and connection
+credit to read each head, which can occupy up to nine octets and itself
+consumes credit. They can consume or spool data and replenish credit
+incrementally; they need not grant credit for an entire bundle at once.<a href="#section-4.6-8" class="pilcrow">¶</a></p>
+<p id="section-4.6-9">Cancellation of unreliable transfers is governed by <span>[<a href="#BTP-U" class="cite xref">BTP-U</a>]</span>.<a href="#section-4.6-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="keepalive">
@@ -2005,15 +2075,21 @@ admitted transfers to progress toward completion. The length prefix
 supplies information for that policy; it is not a deadlock-prevention
 mechanism and does not prevent starvation.<a href="#section-7.3-1" class="pilcrow">¶</a></p>
 <p id="section-7.3-2">The receiver needs sufficient initial stream and connection credit to read
-the CBOR byte-string head, which can occupy up to nine octets. The head
-itself consumes both kinds of flow-control credit. A receiver need not
-grant credit for an entire bundle at once: it can consume or spool data and
+the first CBOR byte-string head, which can occupy up to nine octets, and
+sufficient replenished credit for subsequent heads. Each head itself
+consumes both kinds of flow-control credit. A receiver need not grant
+credit for an entire bundle at once: it can consume or spool data and
 replenish credit incrementally. Granting credit <span class="bcp14">SHOULD</span> reflect actual
 available resources, including storage retained for partial bundles even
 after data has been consumed from transport buffers. Declared lengths are
 untrusted input and <span class="bcp14">MUST NOT</span> cause unchecked allocation. The initial
 flow-control allowance is not an advertised maximum bundle size; size and
-resource-based rejection are described in <a href="#cancellation" class="auto internal xref">Section 4.6</a>.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+resource-based rejection are described in <a href="#cancellation" class="auto internal xref">Section 4.6</a>. On a persistent
+stream, completing an item neither closes the stream nor replenishes byte
+credit automatically. Successive items reduce the need for new
+stream-opening credit but still depend on replenishment of byte credit.
+Receiver admission policies must also account for later items that the
+sender may already have queued on the same stream.<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 <p id="section-7.3-3">Throughput depends on available credit and how promptly it is replenished
 relative to the path RTT, not on treating QUIC's cumulative limits as fixed
 receive windows. Too little available credit, or replenishment that arrives
@@ -2280,6 +2356,10 @@ range 0x40000000 to 0x3FFFFFFFFFFFFFFF are reserved for Private Use
 <dt id="RFC8174">[RFC8174]</dt>
         <dd>
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8742">[RFC8742]</dt>
+        <dd>
+<span class="refAuthor">Bormann, C.</span>, <span class="refTitle">"Concise Binary Object Representation (CBOR) Sequences"</span>, <span class="seriesInfo">RFC 8742</span>, <span class="seriesInfo">DOI 10.17487/RFC8742</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8742">https://www.rfc-editor.org/rfc/rfc8742</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8949">[RFC8949]</dt>
         <dd>
